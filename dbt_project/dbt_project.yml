@@ -1,0 +1,24 @@
+name: pickleball_data_platform
+version: "1.0.0"
+config-version: 2
+
+profile: pickleball_data_platform
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  pickleball_data_platform:
+    staging:
+      amazon_ads:
+        +schema: stg_amazon
+        +materialized: view
+    intermediate:
+      +schema: int_amazon
+      +materialized: view
+    marts:
+      +schema: bi
+      +materialized: table

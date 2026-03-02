@@ -1,0 +1,29 @@
+[project]
+name = "pickleball-data-platform"
+version = "0.1.0"
+description = "Data pipeline platform for Pickleball Effect — dlt + dbt + BigQuery"
+requires-python = ">=3.11"
+dependencies = [
+    "dlt[bigquery]>=1.0",
+    "requests>=2.31",
+    "tenacity>=8.2",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+seller = ["python-amazon-sp-api>=0.3"]
+dev = ["pytest>=8.0", "ruff>=0.4", "dlt[duckdb]"]
+dbt = ["dbt-core>=1.7", "dbt-bigquery>=1.7"]
+
+[tool.setuptools.packages.find]
+include = ["pipelines*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

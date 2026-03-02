@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: stg_amazon_ads__sp_campaigns
+    description: "Staged Sponsored Products campaign-level daily metrics"
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: stg_amazon_ads__sb_campaigns
+    description: "Staged Sponsored Brands campaign-level daily metrics"
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: stg_amazon_ads__sd_campaigns
+    description: "Staged Sponsored Display campaign-level daily metrics"
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: stg_amazon_ads__sp_asin
+    description: "Staged Sponsored Products ASIN-level daily metrics"
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+      - name: asin
+        tests: [not_null]
+
+  - name: stg_amazon_ads__sd_asin
+    description: "Staged Sponsored Display ASIN-level daily metrics"
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+      - name: asin
+        tests: [not_null]

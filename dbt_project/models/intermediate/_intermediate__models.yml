@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: int_amazon__daily_ad_spend_by_campaign
+    description: >
+      Unified daily campaign-level ad spend across Sponsored Products,
+      Sponsored Brands, and Sponsored Display.
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+      - name: ad_product
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['SPONSORED_PRODUCTS', 'SPONSORED_BRANDS', 'SPONSORED_DISPLAY']
+
+  - name: int_amazon__daily_ad_spend_by_asin
+    description: >
+      Unified daily ASIN-level ad spend across Sponsored Products
+      and Sponsored Display.
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+      - name: asin
+        tests: [not_null]
+      - name: ad_product
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['SPONSORED_PRODUCTS', 'SPONSORED_DISPLAY']

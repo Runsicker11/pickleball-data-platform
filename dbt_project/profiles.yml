@@ -1,0 +1,11 @@
+pickleball_data_platform:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: practical-gecko-373320
+      dataset: raw_amazon
+      location: us-west1
+      threads: 4
+      timeout_seconds: 300

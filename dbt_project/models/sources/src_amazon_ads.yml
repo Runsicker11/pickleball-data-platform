@@ -1,0 +1,51 @@
+version: 2
+
+sources:
+  - name: raw_amazon
+    database: practical-gecko-373320
+    schema: raw_amazon
+    description: "Raw Amazon Ads data loaded by dlt"
+    tables:
+      - name: sp_campaigns
+        description: "Sponsored Products campaign-level daily metrics"
+        columns:
+          - name: date
+            tests: [not_null]
+          - name: campaign_id
+            tests: [not_null]
+
+      - name: sb_campaigns
+        description: "Sponsored Brands campaign-level daily metrics"
+        columns:
+          - name: date
+            tests: [not_null]
+          - name: campaign_id
+            tests: [not_null]
+
+      - name: sd_campaigns
+        description: "Sponsored Display campaign-level daily metrics"
+        columns:
+          - name: date
+            tests: [not_null]
+          - name: campaign_id
+            tests: [not_null]
+
+      - name: sp_advertised_products
+        description: "Sponsored Products ASIN-level daily metrics"
+        columns:
+          - name: date
+            tests: [not_null]
+          - name: campaign_id
+            tests: [not_null]
+          - name: advertised_asin
+            tests: [not_null]
+
+      - name: sd_advertised_products
+        description: "Sponsored Display ASIN-level daily metrics"
+        columns:
+          - name: date
+            tests: [not_null]
+          - name: campaign_id
+            tests: [not_null]
+          - name: promoted_asin
+            tests: [not_null]
