@@ -32,3 +32,19 @@ models:
           - not_null
           - accepted_values:
               values: ['SPONSORED_PRODUCTS', 'SPONSORED_DISPLAY']
+
+  - name: int_amazon__daily_orders
+    description: "Daily order aggregations by ASIN from Airbyte order data"
+    columns:
+      - name: purchase_date_utc
+        tests: [not_null]
+      - name: asin
+        tests: [not_null]
+
+  - name: int_amazon__daily_ad_spend
+    description: "Daily ad spend aggregation by ASIN from SP advertised products"
+    columns:
+      - name: date
+        tests: [not_null]
+      - name: asin
+        tests: [not_null]

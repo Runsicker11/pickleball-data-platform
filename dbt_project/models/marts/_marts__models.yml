@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: fct_amazon__daily_profitability
+    description: >
+      Daily profitability by ASIN — joins orders, ad spend, and product COGS.
+      Calculates contribution = sales - (COGS + FBA + ad cost + selling fees + refunds + shipping).
+    columns:
+      - name: purchase_date_utc
+        tests: [not_null]
+      - name: asin
+        tests: [not_null]
+      - name: sales
+        tests: [not_null]
+      - name: contribution
+        description: "Net contribution after all costs"

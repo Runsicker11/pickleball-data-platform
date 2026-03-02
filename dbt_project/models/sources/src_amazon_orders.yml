@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+  - name: amazon_orders
+    database: practical-gecko-373320
+    schema: Amazon
+    description: "Amazon order data (loaded by Airbyte)"
+    tables:
+      - name: amazon_airbyteGET_FLAT_FILE_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL
+        description: "Flat file all orders data by order date"
+
+  - name: product
+    database: practical-gecko-373320
+    schema: product
+    description: "Product reference data"
+    tables:
+      - name: amazon_product_map
+        description: "ASIN-level COGS and FBA cost mapping (54 products)"
+        columns:
+          - name: asin
+            tests: [not_null, unique]

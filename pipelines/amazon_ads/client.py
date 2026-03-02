@@ -189,9 +189,18 @@ class AmazonAdsClient:
         # Retry loop — handles 425 (duplicate), 429 (rate limit), and transient errors
         max_attempts = 10
         for attempt in range(1, max_attempts + 1):
-            resp = self._session.request(
-                "POST", url, headers=self._headers(profile_id), json=payload
-            )
+            try:
+                resp = self._session.request(
+                    "POST", url, headers=self._headers(profile_id), json=payload
+                )
+            except requests.exceptions.ConnectionError as e:
+                wait = min(30 * attempt, 120)
+                logger.warning(
+                    f"Connection error creating report (attempt {attempt}): {e}. "
+                    f"Waiting {wait}s"
+                )
+                time.sleep(wait)
+                continue
 
             if resp.status_code == 425:
                 try:
