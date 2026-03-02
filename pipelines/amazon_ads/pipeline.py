@@ -42,19 +42,21 @@ def run_pipeline(
     if reports is None:
         reports = ALL_REPORTS
 
-    # Build destination kwargs
-    dest_kwargs = {}
+    # Build destination
     if destination == "bigquery":
-        dest_kwargs["credentials"] = {
-            "project_id": GCP_PROJECT_ID,
-            "location": BIGQUERY_LOCATION,
-        }
+        dest = dlt.destinations.bigquery(
+            credentials={
+                "project_id": GCP_PROJECT_ID,
+                "location": BIGQUERY_LOCATION,
+            }
+        )
+    else:
+        dest = destination
 
     pipeline = dlt.pipeline(
         pipeline_name="amazon_ads",
-        destination=destination,
+        destination=dest,
         dataset_name=dataset_name,
-        **dest_kwargs,
     )
 
     source = amazon_ads_source(

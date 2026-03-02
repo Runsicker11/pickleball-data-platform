@@ -186,31 +186,47 @@ class AmazonAdsClient:
             f"{start_date}→{end_date}"
         )
 
-        # First attempt — handle 425 (duplicate) without retries
-        resp = self._session.request(
-            "POST", url, headers=self._headers(profile_id), json=payload
-        )
+        # Retry loop — handles 425 (duplicate), 429 (rate limit), and transient errors
+        max_attempts = 10
+        for attempt in range(1, max_attempts + 1):
+            resp = self._session.request(
+                "POST", url, headers=self._headers(profile_id), json=payload
+            )
 
-        if resp.status_code == 425:
-            try:
-                detail = resp.json().get("detail", "")
-                if ":" in detail:
-                    report_id = detail.split(":")[-1].strip()
-                    logger.warning(f"Duplicate report (425). Reusing ID: {report_id}")
-                    return report_id
-            except Exception:
-                pass
+            if resp.status_code == 425:
+                try:
+                    detail = resp.json().get("detail", "")
+                    if ":" in detail:
+                        report_id = detail.split(":")[-1].strip()
+                        logger.warning(f"Duplicate report (425). Reusing ID: {report_id}")
+                        return report_id
+                except Exception:
+                    pass
 
-        if 200 <= resp.status_code < 300:
-            report_id = resp.json()["reportId"]
-            logger.info(f"Report created: {report_id}")
-            return report_id
+            if resp.status_code == 429:
+                retry_after = int(resp.headers.get("Retry-After", 60))
+                logger.warning(
+                    f"Rate limited creating report (attempt {attempt}/{max_attempts}). "
+                    f"Waiting {retry_after}s"
+                )
+                time.sleep(retry_after)
+                continue
 
-        # Fall back to retriable request for transient errors
-        resp = self._request("POST", url, profile_id, json=payload)
-        report_id = resp.json()["reportId"]
-        logger.info(f"Report created (retry): {report_id}")
-        return report_id
+            if resp.status_code >= 500:
+                logger.warning(f"Server error {resp.status_code} (attempt {attempt}), retrying")
+                time.sleep(min(30 * attempt, 120))
+                continue
+
+            if 200 <= resp.status_code < 300:
+                report_id = resp.json()["reportId"]
+                logger.info(f"Report created: {report_id}")
+                return report_id
+
+            # Other client errors — not retriable
+            logger.error(f"Report creation failed ({resp.status_code}): {resp.text}")
+            resp.raise_for_status()
+
+        raise ReportError(f"Failed to create report after {max_attempts} attempts")
 
     def wait_for_report(self, profile_id: str, report_id: str) -> str:
         """Poll until report completes. Returns download URL."""
@@ -270,7 +286,11 @@ class AmazonAdsClient:
             profile_id, ad_product, report_type_id, start_date, end_date, columns, group_by
         )
         download_url = self.wait_for_report(profile_id, report_id)
-        return self.download_report(download_url)
+        rows = self.download_report(download_url)
+        # Cooldown between reports to avoid rate limiting
+        logger.info("Waiting 10s before next report (rate limit cooldown)...")
+        time.sleep(10)
+        return rows
 
     def get_profiles(self) -> list[dict]:
         """Fetch all advertising profiles for this account."""

@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 FLOAT_COLUMNS = {
     "cost",
     "sales14d",
+    "sales",
     "salesClicks",
     "unitsSoldClicks",
     "clickThroughRate",
@@ -22,8 +23,10 @@ INT_COLUMNS = {
     "impressions",
     "clicks",
     "purchases14d",
+    "purchases",
     "purchasesClicks",
     "unitsSoldClicks14d",
+    "unitsSold",
 }
 
 
