@@ -51,15 +51,9 @@ sources:
             tests: [not_null]
 
       - name: seller_orders
-        description: "Amazon Seller Central orders via SP-API"
+        description: "Amazon Seller Central flat-file order report via SP-API Reports API (one row per line item)"
         columns:
           - name: amazon_order_id
-            tests: [not_null, unique]
-
-      - name: seller_order_items
-        description: "Amazon Seller Central order line items via SP-API"
-        columns:
-          - name: order_item_id
-            tests: [not_null, unique]
-          - name: amazon_order_id
+            tests: [not_null]
+          - name: asin
             tests: [not_null]

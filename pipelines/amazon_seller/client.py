@@ -1,9 +1,12 @@
 """
-Amazon SP-API client for Seller Central data (orders, inventory, catalog).
+Amazon SP-API client for Seller Central data.
 
-Uses the Orders API v0 and Reports API for bulk order data.
+Uses the Reports API v2021-06-30 for bulk order data (much faster than per-order API).
 """
 
+import csv
+import gzip
+import io
 import logging
 import time
 from datetime import datetime, timedelta
@@ -17,13 +20,15 @@ SP_API_BASE = "https://sellingpartnerapi-na.amazon.com"
 LWA_TOKEN_URL = "https://api.amazon.com/auth/o2/token"
 MARKETPLACE_US = "ATVPDKIKX0DER"
 
+REPORTS_PATH = "/reports/2021-06-30"
+
 
 class SPAPIError(Exception):
     """Base exception for SP-API errors."""
 
 
 class SPAPIClient:
-    """Amazon Selling Partner API client with LWA auth and pagination."""
+    """Amazon Selling Partner API client with LWA auth and Reports API."""
 
     def __init__(
         self,
@@ -31,11 +36,15 @@ class SPAPIClient:
         client_secret: str,
         refresh_token: str,
         marketplace_id: str = MARKETPLACE_US,
+        poll_interval: int = 30,
+        poll_timeout_minutes: int = 30,
     ):
         self.client_id = client_id
         self.client_secret = client_secret
         self.refresh_token = refresh_token
         self.marketplace_id = marketplace_id
+        self.poll_interval = poll_interval
+        self.poll_timeout_minutes = poll_timeout_minutes
 
         self._access_token: str | None = None
         self._token_expires_at: datetime | None = None
@@ -84,7 +93,7 @@ class SPAPIClient:
     ) -> dict:
         """Make an SP-API request with rate-limit handling."""
         url = f"{SP_API_BASE}{path}"
-        max_attempts = 5
+        max_attempts = 10
 
         for attempt in range(1, max_attempts + 1):
             try:
@@ -98,14 +107,12 @@ class SPAPIClient:
                 continue
 
             if resp.status_code == 429:
-                retry_after = int(resp.headers.get("x-amzn-RateLimit-Limit", 2))
-                wait = max(1.0 / retry_after if retry_after else 2, 2)
+                wait = min(5 * (2 ** (attempt - 1)), 120)
                 logger.warning(f"Rate limited (attempt {attempt}). Waiting {wait}s")
                 time.sleep(wait)
                 continue
 
             if resp.status_code == 403:
-                # Token may have expired
                 self._access_token = None
                 if attempt < max_attempts:
                     logger.warning(f"Got 403, refreshing token and retrying: {resp.text}")
@@ -124,82 +131,82 @@ class SPAPIClient:
 
         raise SPAPIError(f"Failed after {max_attempts} attempts: {path}")
 
-    # ── Orders API ───────────────────────────────────────────────────
+    # ── Reports API ──────────────────────────────────────────────────
 
-    def get_orders(
+    def create_report(
         self,
-        created_after: str,
-        created_before: str | None = None,
-        order_statuses: list[str] | None = None,
-    ) -> list[dict]:
-        """Fetch orders with automatic pagination.
-
-        Args:
-            created_after: ISO 8601 datetime string
-            created_before: Optional end datetime
-            order_statuses: Optional filter, e.g. ["Shipped", "Unshipped"]
-
-        Returns:
-            List of order dicts
-        """
-        params: dict[str, Any] = {
-            "MarketplaceIds": self.marketplace_id,
-            "CreatedAfter": created_after,
+        report_type: str,
+        start_date: str,
+        end_date: str,
+    ) -> str:
+        """Create a report and return its report ID."""
+        payload = {
+            "reportType": report_type,
+            "marketplaceIds": [self.marketplace_id],
+            "dataStartTime": start_date,
+            "dataEndTime": end_date,
         }
-        if created_before:
-            params["CreatedBefore"] = created_before
-        if order_statuses:
-            params["OrderStatuses"] = ",".join(order_statuses)
 
-        all_orders = []
-        next_token = None
+        logger.info(f"Creating {report_type} report: {start_date} → {end_date}")
+        data = self._request("POST", f"{REPORTS_PATH}/reports", json=payload)
+        report_id = data["reportId"]
+        logger.info(f"Report created: {report_id}")
+        return report_id
 
-        while True:
-            if next_token:
-                data = self._request("GET", "/orders/v0/orders", params={"NextToken": next_token})
-            else:
-                data = self._request("GET", "/orders/v0/orders", params=params)
+    def wait_for_report(self, report_id: str) -> str:
+        """Poll until report completes. Returns reportDocumentId."""
+        deadline = time.time() + self.poll_timeout_minutes * 60
 
-            payload = data.get("payload", {})
-            orders = payload.get("Orders", [])
-            all_orders.extend(orders)
-            logger.info(f"Fetched {len(orders)} orders (total: {len(all_orders)})")
+        while time.time() < deadline:
+            data = self._request("GET", f"{REPORTS_PATH}/reports/{report_id}")
+            status = data.get("processingStatus")
+            logger.info(f"Report {report_id}: {status}")
 
-            next_token = payload.get("NextToken")
-            if not next_token:
-                break
+            if status == "DONE":
+                doc_id = data.get("reportDocumentId")
+                if not doc_id:
+                    raise SPAPIError(f"Report done but no documentId: {data}")
+                return doc_id
 
-            # Small delay between pages to respect rate limits
-            time.sleep(0.5)
+            if status in ("CANCELLED", "FATAL"):
+                raise SPAPIError(f"Report {report_id} failed: {status}")
 
-        return all_orders
+            time.sleep(self.poll_interval)
 
-    def get_order_items(self, order_id: str) -> list[dict]:
-        """Fetch line items for a specific order."""
-        all_items = []
-        next_token = None
+        raise SPAPIError(
+            f"Report {report_id} timed out after {self.poll_timeout_minutes} minutes"
+        )
 
-        while True:
-            params = {}
-            if next_token:
-                params["NextToken"] = next_token
+    def download_report(self, document_id: str) -> list[dict]:
+        """Get report document URL, download, and parse TSV into list of dicts."""
+        data = self._request("GET", f"{REPORTS_PATH}/documents/{document_id}")
+        url = data["url"]
+        compression = data.get("compressionAlgorithm")
 
-            data = self._request(
-                "GET", f"/orders/v0/orders/{order_id}/orderItems", params=params
-            )
+        logger.info(f"Downloading report document {document_id}...")
+        resp = requests.get(url, timeout=120)
+        resp.raise_for_status()
 
-            payload = data.get("payload", {})
-            items = payload.get("OrderItems", [])
+        content = resp.content
+        if compression == "GZIP":
+            content = gzip.decompress(content)
 
-            for item in items:
-                item["AmazonOrderId"] = order_id
+        text = content.decode("utf-8-sig")  # utf-8-sig handles BOM
+        reader = csv.DictReader(io.StringIO(text), delimiter="\t")
+        rows = list(reader)
+        logger.info(f"Downloaded {len(rows)} rows")
+        return rows
 
-            all_items.extend(items)
-
-            next_token = payload.get("NextToken")
-            if not next_token:
-                break
-
-            time.sleep(0.3)
-
-        return all_items
+    def fetch_order_report(
+        self,
+        start_date: str,
+        end_date: str,
+    ) -> list[dict]:
+        """End-to-end: create → poll → download order report. Returns rows."""
+        report_id = self.create_report(
+            report_type="GET_FLAT_FILE_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL",
+            start_date=start_date,
+            end_date=end_date,
+        )
+        document_id = self.wait_for_report(report_id)
+        return self.download_report(document_id)
