@@ -5,7 +5,8 @@ Usage:
     python -m pipelines.run amazon-ads --days 7
     python -m pipelines.run amazon-ads --days 7 --destination duckdb
     python -m pipelines.run amazon-ads --days 7 --reports campaigns
-    python -m pipelines.run amazon-ads --days 7 --reports asin
+    python -m pipelines.run amazon-seller --days 30
+    python -m pipelines.run amazon-seller --days 30 --destination duckdb
 """
 
 import argparse
@@ -37,6 +38,21 @@ def main():
         help="Which report subset to run (default: all)",
     )
 
+    # ── amazon-seller ─────────────────────────────────────────────────
+    as_parser = subparsers.add_parser("amazon-seller", help="Run Amazon Seller Central pipeline")
+    as_parser.add_argument(
+        "--days", type=int, default=30, help="Days of order history to pull (default: 30)"
+    )
+    as_parser.add_argument(
+        "--destination",
+        choices=["bigquery", "duckdb"],
+        default="bigquery",
+        help="Load destination (default: bigquery)",
+    )
+    as_parser.add_argument(
+        "--dataset", default="raw_amazon", help="Target dataset name (default: raw_amazon)"
+    )
+
     args = parser.parse_args()
 
     # Configure logging
@@ -61,6 +77,16 @@ def main():
             dataset_name=args.dataset,
             days_back=args.days,
             reports=report_map[args.reports],
+        )
+        print(f"\nPipeline finished. Load info:\n{load_info}")
+
+    elif args.pipeline == "amazon-seller":
+        from .amazon_seller.pipeline import run_pipeline
+
+        load_info = run_pipeline(
+            destination=args.destination,
+            dataset_name=args.dataset,
+            days_back=args.days,
         )
         print(f"\nPipeline finished. Load info:\n{load_info}")
 

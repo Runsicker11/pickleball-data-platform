@@ -34,7 +34,7 @@ models:
               values: ['SPONSORED_PRODUCTS', 'SPONSORED_DISPLAY']
 
   - name: int_amazon__daily_orders
-    description: "Daily order aggregations by ASIN from Airbyte order data"
+    description: "Daily order aggregations by ASIN from SP-API seller orders"
     columns:
       - name: purchase_date_utc
         tests: [not_null]

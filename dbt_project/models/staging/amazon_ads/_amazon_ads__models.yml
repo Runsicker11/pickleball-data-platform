@@ -44,3 +44,13 @@ models:
         tests: [not_null]
       - name: asin
         tests: [not_null]
+
+  - name: stg_amazon__orders_clean
+    description: "Cleaned Amazon orders from SP-API (seller_orders + seller_order_items)"
+    columns:
+      - name: amazon_order_id
+        tests: [not_null]
+      - name: asin
+        tests: [not_null]
+      - name: purchase_date
+        tests: [not_null]

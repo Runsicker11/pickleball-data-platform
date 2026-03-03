@@ -17,6 +17,12 @@ AMAZON_PROFILE_IDS = [
     p.strip() for p in os.getenv("AMAZON_PROFILE_IDS", "").split(",") if p.strip()
 ]
 
+# Amazon SP-API (Seller Central — separate app from Ads)
+SP_API_CLIENT_ID = os.getenv("SP_API_CLIENT_ID", "")
+SP_API_CLIENT_SECRET = os.getenv("SP_API_CLIENT_SECRET", "")
+SP_API_REFRESH_TOKEN = os.getenv("SP_API_REFRESH_TOKEN", "")
+SP_API_MARKETPLACE_ID = os.getenv("SP_API_MARKETPLACE_ID", "ATVPDKIKX0DER")
+
 # Pipeline defaults
 PIPELINE_ROLLING_DAYS = int(os.getenv("PIPELINE_ROLLING_DAYS", "7"))
 PIPELINE_POLL_INTERVAL = int(os.getenv("PIPELINE_POLL_INTERVAL", "120"))

@@ -4,7 +4,7 @@ sources:
   - name: raw_amazon
     database: practical-gecko-373320
     schema: raw_amazon
-    description: "Raw Amazon Ads data loaded by dlt"
+    description: "Raw Amazon data loaded by dlt (Ads + Seller Central)"
     tables:
       - name: sp_campaigns
         description: "Sponsored Products campaign-level daily metrics"
@@ -48,4 +48,18 @@ sources:
           - name: campaign_id
             tests: [not_null]
           - name: promoted_asin
+            tests: [not_null]
+
+      - name: seller_orders
+        description: "Amazon Seller Central orders via SP-API"
+        columns:
+          - name: amazon_order_id
+            tests: [not_null, unique]
+
+      - name: seller_order_items
+        description: "Amazon Seller Central order line items via SP-API"
+        columns:
+          - name: order_item_id
+            tests: [not_null, unique]
+          - name: amazon_order_id
             tests: [not_null]

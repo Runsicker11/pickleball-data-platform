@@ -1,27 +1,33 @@
-with source as (
-    select * from {{ source('amazon_orders', 'amazon_airbyteGET_FLAT_FILE_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL') }}
+-- Orders + line items from Amazon SP-API (Seller Central)
+-- Replaces the old Airbyte flat-file source
+
+with orders as (
+    select * from {{ source('raw_amazon', 'seller_orders') }}
 ),
 
-prep as (
-    select distinct
-        sku,
-        asin,
-        currency,
-        cast(case when quantity = '' then '0' else quantity end as numeric) as quantity,
-        cast(case when item_price = '' then '0' else item_price end as numeric) as item_price,
-        item_status,
-        order_status,
-        ship_country,
-        sales_channel,
-        datetime(cast(purchase_date as timestamp), 'US/Pacific') as purchase_date_pac,
-        datetime(cast(purchase_date as timestamp)) as purchase_date,
-        amazon_order_id,
-        ship_service_level,
-        cast(case when item_promotion_discount = '' then '0' else item_promotion_discount end as numeric) as item_promotion_discount
-    from source
-    where order_status != 'Cancelled'
-        and sales_channel != 'Non-Amazon'
-        and item_status != 'Cancelled'
+items as (
+    select * from {{ source('raw_amazon', 'seller_order_items') }}
+),
+
+joined as (
+    select
+        items.seller_sku as sku,
+        items.asin,
+        coalesce(items.item_price_currency, orders.order_total_currency) as currency,
+        cast(coalesce(items.quantity_ordered, 0) as numeric) as quantity,
+        cast(coalesce(items.item_price_amount, 0) as numeric) as item_price,
+        orders.order_status,
+        orders.ship_country,
+        orders.sales_channel,
+        datetime(cast(orders.purchase_date as timestamp), 'US/Pacific') as purchase_date_pac,
+        datetime(cast(orders.purchase_date as timestamp)) as purchase_date,
+        orders.amazon_order_id,
+        orders.ship_service_level,
+        cast(coalesce(items.promotion_discount_amount, 0) as numeric) as item_promotion_discount
+    from orders
+    inner join items
+        on orders.amazon_order_id = items.amazon_order_id
+    where orders.order_status != 'Cancelled'
 ),
 
 conversion as (
@@ -37,7 +43,7 @@ conversion as (
             when currency = 'CAD' then item_promotion_discount * 0.72
             else item_promotion_discount
         end as corrected_item_promotion_discount
-    from prep
+    from joined
 )
 
 select
