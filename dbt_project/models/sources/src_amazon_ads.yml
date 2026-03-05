@@ -57,3 +57,27 @@ sources:
             tests: [not_null]
           - name: asin
             tests: [not_null]
+
+      - name: seller_fba_shipments
+        description: "FBA fulfilled shipments (buyer info, carrier, tracking)"
+        columns:
+          - name: amazon_order_id
+            tests: [not_null]
+          - name: sku
+            tests: [not_null]
+
+      - name: seller_traffic
+        description: "Sales & Traffic by ASIN (sessions, page views, buy box, conversion)"
+        columns:
+          - name: child_asin
+            tests: [not_null]
+          - name: report_date
+            tests: [not_null]
+
+      - name: seller_fba_fees
+        description: "FBA fee estimates per SKU (referral, pick-pack, fulfillment fees)"
+        columns:
+          - name: sku
+            tests: [not_null]
+          - name: asin
+            tests: [not_null]

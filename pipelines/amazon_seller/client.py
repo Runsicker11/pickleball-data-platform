@@ -7,6 +7,7 @@ Uses the Reports API v2021-06-30 for bulk order data (much faster than per-order
 import csv
 import gzip
 import io
+import json
 import logging
 import time
 from datetime import datetime, timedelta
@@ -138,6 +139,7 @@ class SPAPIClient:
         report_type: str,
         start_date: str,
         end_date: str,
+        report_options: dict | None = None,
     ) -> str:
         """Create a report and return its report ID."""
         payload = {
@@ -146,6 +148,8 @@ class SPAPIClient:
             "dataStartTime": start_date,
             "dataEndTime": end_date,
         }
+        if report_options:
+            payload["reportOptions"] = report_options
 
         logger.info(f"Creating {report_type} report: {start_date} → {end_date}")
         data = self._request("POST", f"{REPORTS_PATH}/reports", json=payload)
@@ -177,8 +181,14 @@ class SPAPIClient:
             f"Report {report_id} timed out after {self.poll_timeout_minutes} minutes"
         )
 
-    def download_report(self, document_id: str) -> list[dict]:
-        """Get report document URL, download, and parse TSV into list of dicts."""
+    def download_report(self, document_id: str, fmt: str = "tsv") -> list[dict] | dict:
+        """Get report document URL, download, and parse.
+
+        Args:
+            document_id: The report document ID.
+            fmt: "tsv" for tab-separated (returns list[dict]),
+                 "json" for JSON reports (returns parsed dict/list).
+        """
         data = self._request("GET", f"{REPORTS_PATH}/documents/{document_id}")
         url = data["url"]
         compression = data.get("compressionAlgorithm")
@@ -191,11 +201,32 @@ class SPAPIClient:
         if compression == "GZIP":
             content = gzip.decompress(content)
 
+        if fmt == "json":
+            return json.loads(content.decode("utf-8"))
+
         text = content.decode("utf-8-sig")  # utf-8-sig handles BOM
         reader = csv.DictReader(io.StringIO(text), delimiter="\t")
         rows = list(reader)
         logger.info(f"Downloaded {len(rows)} rows")
         return rows
+
+    def fetch_report(
+        self,
+        report_type: str,
+        start_date: str,
+        end_date: str,
+        report_options: dict | None = None,
+        fmt: str = "tsv",
+    ) -> list[dict] | dict:
+        """Generic end-to-end: create → poll → download any report."""
+        report_id = self.create_report(
+            report_type=report_type,
+            start_date=start_date,
+            end_date=end_date,
+            report_options=report_options,
+        )
+        document_id = self.wait_for_report(report_id)
+        return self.download_report(document_id, fmt=fmt)
 
     def fetch_order_report(
         self,
@@ -203,10 +234,8 @@ class SPAPIClient:
         end_date: str,
     ) -> list[dict]:
         """End-to-end: create → poll → download order report. Returns rows."""
-        report_id = self.create_report(
+        return self.fetch_report(
             report_type="GET_FLAT_FILE_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL",
             start_date=start_date,
             end_date=end_date,
         )
-        document_id = self.wait_for_report(report_id)
-        return self.download_report(document_id)

@@ -54,3 +54,29 @@ models:
         tests: [not_null]
       - name: purchase_date
         tests: [not_null]
+
+  - name: stg_amazon__fba_shipments
+    description: "Staged FBA fulfilled shipments (buyer info, carrier, tracking)"
+    columns:
+      - name: amazon_order_id
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: shipment_id
+        tests: [not_null]
+
+  - name: stg_amazon__traffic
+    description: "Staged Sales & Traffic by ASIN (sessions, page views, buy box %)"
+    columns:
+      - name: child_asin
+        tests: [not_null]
+      - name: report_date
+        tests: [not_null]
+
+  - name: stg_amazon__fba_fees
+    description: "Staged FBA fee estimates per SKU (referral, pick-pack, fulfillment)"
+    columns:
+      - name: sku
+        tests: [not_null]
+      - name: asin
+        tests: [not_null]
