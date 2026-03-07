@@ -3,7 +3,7 @@
 
 with line_items_detail as (
     select
-        li.sku,
+        coalesce(nullif(li.sku, ''), concat('NO_SKU_', replace(li.title, ' ', '_'))) as sku,
         li.title,
         li.order_id,
         date(o.created_at) as order_date,
@@ -17,7 +17,6 @@ with line_items_detail as (
         end as net_revenue
     from {{ ref('stg_shopify__order_line_items') }} li
     join {{ ref('stg_shopify__orders') }} o on li.order_id = o.order_id
-    where li.sku is not null and li.sku != ''
 ),
 
 order_totals as (
