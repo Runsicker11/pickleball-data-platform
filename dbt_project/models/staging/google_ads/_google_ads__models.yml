@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: stg_google_ads__campaigns
+    description: "Staged Google Ads campaigns with typed columns"
+    columns:
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: stg_google_ads__ad_groups
+    description: "Staged Google Ads ad groups with typed columns"
+    columns:
+      - name: ad_group_id
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: stg_google_ads__keywords
+    description: "Staged Google Ads keywords with typed columns"
+    columns:
+      - name: keyword_id
+        tests: [not_null]
+      - name: ad_group_id
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: stg_google_ads__daily_insights
+    description: "Staged Google Ads daily performance metrics"
+    columns:
+      - name: date_start
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: stg_google_ads__search_terms
+    description: "Staged Google Ads search term report"
+    columns:
+      - name: date_start
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+      - name: search_term
+        tests: [not_null]

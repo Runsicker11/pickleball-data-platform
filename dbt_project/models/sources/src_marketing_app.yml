@@ -1,0 +1,31 @@
+version: 2
+
+sources:
+  - name: marketing_app
+    database: practical-gecko-373320
+    schema: marketing_data
+    description: "Application tables written by ai-marketing (not API ingestion)"
+    tables:
+      - name: content_library
+        description: "Reusable ad copy components (hooks, bodies, CTAs)"
+        columns:
+          - name: component_id
+            tests: [not_null]
+
+      - name: content_posts
+        description: "SEO content posts published to WordPress and Shopify"
+        columns:
+          - name: post_id
+            tests: [not_null]
+
+      - name: google_ads_ad_copy
+        description: "Google Ads RSA ad copy (headlines and descriptions)"
+        columns:
+          - name: ad_id
+            tests: [not_null]
+
+      - name: optimization_actions
+        description: "Optimization action proposals and execution log"
+        columns:
+          - name: action_id
+            tests: [not_null]

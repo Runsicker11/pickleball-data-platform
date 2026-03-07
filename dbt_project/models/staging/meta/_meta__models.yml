@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: stg_meta__campaigns
+    description: "Staged Meta Ads campaigns with typed columns"
+    columns:
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: stg_meta__adsets
+    description: "Staged Meta Ads ad sets with typed columns"
+    columns:
+      - name: adset_id
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: stg_meta__ads
+    description: "Staged Meta Ads ads with typed columns"
+    columns:
+      - name: ad_id
+        tests: [not_null]
+      - name: adset_id
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: stg_meta__creatives
+    description: "Staged Meta Ads creatives with typed columns"
+    columns:
+      - name: creative_id
+        tests: [not_null]
+      - name: ad_id
+        tests: [not_null]
+
+  - name: stg_meta__daily_insights
+    description: "Staged Meta Ads daily performance metrics"
+    columns:
+      - name: date_start
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
+      - name: ad_id
+        tests: [not_null]

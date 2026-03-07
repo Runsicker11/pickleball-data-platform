@@ -1,6 +1,8 @@
 -- FBA fee estimates per SKU from SP-API Reports API
 -- (GET_FBA_ESTIMATED_FBA_FEES_TXT_DATA)
 -- One row per SKU/ASIN — referral, pick-pack, fulfillment fee breakdown
+-- DISABLED: SP-API returns 403 for this report type. Re-enable once permissions are fixed.
+{{ config(enabled=false) }}
 
 with source as (
     select * from {{ source('raw_amazon', 'seller_fba_fees') }}

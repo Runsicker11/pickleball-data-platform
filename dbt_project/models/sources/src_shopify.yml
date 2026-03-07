@@ -1,0 +1,47 @@
+version: 2
+
+sources:
+  - name: raw_shopify
+    database: practical-gecko-373320
+    schema: raw_shopify
+    description: "Raw Shopify data loaded by dlt (orders, products, customers)"
+    freshness:
+      warn_after: {count: 36, period: hour}
+      error_after: {count: 48, period: hour}
+    loaded_at_field: ingested_at
+    tables:
+      - name: orders
+        description: "Shopify orders with payment and fulfillment status"
+        columns:
+          - name: order_id
+            tests: [not_null]
+          - name: order_date
+            tests: [not_null]
+
+      - name: order_line_items
+        description: "Individual line items within Shopify orders"
+        columns:
+          - name: line_item_id
+            tests: [not_null]
+          - name: order_id
+            tests: [not_null]
+
+      - name: products
+        description: "Shopify product catalog"
+        columns:
+          - name: product_id
+            tests: [not_null]
+
+      - name: product_variants
+        description: "Shopify product variants (size, color, etc.)"
+        columns:
+          - name: variant_id
+            tests: [not_null]
+          - name: product_id
+            tests: [not_null]
+
+      - name: customers
+        description: "Shopify customer records"
+        columns:
+          - name: customer_id
+            tests: [not_null]
