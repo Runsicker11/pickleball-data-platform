@@ -1,0 +1,112 @@
+version: 2
+
+models:
+  - name: int_marketing__daily_performance
+    description: "Unified daily performance across Meta + Google Ads"
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: platform
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['meta', 'google_ads']
+
+  - name: int_marketing__true_roas
+    description: "Cross-platform spend vs actual Shopify revenue (UTM-attributed)"
+    columns:
+      - name: report_date
+        tests: [not_null]
+
+  - name: int_marketing__product_performance
+    description: "Product sales by channel (source/medium)"
+
+  - name: int_marketing__trends
+    description: "7d/30d rolling averages + DoD/WoW changes"
+    columns:
+      - name: report_date
+        tests: [not_null]
+
+  - name: int_marketing__ga4_attribution
+    description: "GA4 purchase events matched to Shopify orders via transaction_id"
+    columns:
+      - name: order_date
+        tests: [not_null]
+
+  - name: int_marketing__enhanced_roas
+    description: "GA4-attributed ROAS by channel"
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: channel
+        tests: [not_null]
+
+  - name: int_marketing__ga4_funnel
+    description: "Full purchase funnel by traffic source"
+    columns:
+      - name: report_date
+        tests: [not_null]
+
+  - name: int_marketing__ga4_product_insights
+    description: "Product views/carts/purchases from GA4"
+
+  - name: int_marketing__creative_performance
+    description: "Creative text + lifetime performance metrics"
+
+  - name: int_marketing__component_scores
+    description: "Content library component performance scoring"
+
+  - name: int_marketing__google_ads_keywords
+    description: "Keyword performance with quality scores and tiers"
+
+  - name: int_marketing__search_terms_waste
+    description: "Search terms with spend but zero conversions"
+
+  - name: int_marketing__seo_opportunities
+    description: "Striking-distance keywords (position 5-20)"
+
+  - name: int_marketing__seo_content_gaps
+    description: "High impressions, low CTR pages"
+
+  - name: int_marketing__seo_trends
+    description: "Week-over-week ranking changes"
+
+  - name: int_marketing__channel_summary
+    description: "Daily rollup by channel (Meta, Google, Organic, Direct, Referral)"
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: channel
+        tests: [not_null]
+
+  - name: int_marketing__content_performance
+    description: "Published content tracking with Search Console + GA4"
+
+  - name: int_marketing__google_ads_copy_performance
+    description: "RSA asset-level performance"
+
+  - name: int_marketing__product_profitability
+    description: "SKU-level profitability with COGS matching"
+    columns:
+      - name: estimated_shipping_cost
+        description: "Estimated shipping cost ($5.35/order allocated proportionally by revenue share)"
+      - name: contribution_profit
+        description: "Gross profit minus estimated shipping cost"
+      - name: contribution_margin
+        description: "Contribution profit as a fraction of net revenue"
+
+  - name: int_marketing__customer_cohorts
+    description: "Customer cohort assignment with order-level profitability and cumulative profit"
+    columns:
+      - name: customer_id
+        tests: [not_null]
+      - name: cohort_month
+        tests: [not_null]
+      - name: order_id
+        tests: [not_null]
+      - name: estimated_shipping_cost
+        description: "Flat $5.35 estimated shipping cost per order"
+      - name: contribution_profit
+        description: "Gross profit minus estimated shipping cost"
+      - name: cumulative_contribution_profit
+        description: "Running total of contribution profit per customer"

@@ -16,9 +16,27 @@ models:
       amazon_ads:
         +schema: stg_amazon
         +materialized: view
+      shopify:
+        +schema: stg_shopify
+        +materialized: view
+      meta:
+        +schema: stg_meta
+        +materialized: view
+      google_ads:
+        +schema: stg_google_ads
+        +materialized: view
+      search_console:
+        +schema: stg_search_console
+        +materialized: view
     intermediate:
-      +schema: int_amazon
       +materialized: view
+      amazon_ads:
+        +schema: int_amazon
+      marketing:
+        +schema: int_marketing
     marts:
       +schema: bi
       +materialized: table
+    compat:
+      +schema: marketing_data
+      +materialized: view

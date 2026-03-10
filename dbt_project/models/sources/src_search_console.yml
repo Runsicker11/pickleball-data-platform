@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+  - name: raw_search_console
+    database: practical-gecko-373320
+    schema: raw_search_console
+    description: "Raw Google Search Console data loaded by dlt (multi-site query performance)"
+    freshness:
+      warn_after: {count: 36, period: hour}
+      error_after: {count: 48, period: hour}
+    loaded_at_field: ingested_at
+    tables:
+      - name: performance
+        description: "Search Console query and page performance metrics per site"
+        columns:
+          - name: query_date
+            tests: [not_null]
+          - name: site
+            tests: [not_null]
+          - name: query
+            tests: [not_null]

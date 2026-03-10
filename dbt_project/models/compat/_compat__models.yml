@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: vw_daily_performance
+    description: "Compat view → int_marketing__daily_performance"
+  - name: vw_true_roas
+    description: "Compat view → int_marketing__true_roas"
+  - name: vw_product_performance
+    description: "Compat view → int_marketing__product_performance"
+  - name: vw_trends
+    description: "Compat view → fct_marketing__trends"
+  - name: vw_ga4_attribution
+    description: "Compat view → int_marketing__ga4_attribution"
+  - name: vw_enhanced_roas
+    description: "Compat view → fct_marketing__enhanced_roas"
+  - name: vw_ga4_funnel
+    description: "Compat view → int_marketing__ga4_funnel"
+  - name: vw_ga4_product_insights
+    description: "Compat view → int_marketing__ga4_product_insights"
+  - name: vw_creative_performance
+    description: "Compat view → int_marketing__creative_performance"
+  - name: vw_component_scores
+    description: "Compat view → int_marketing__component_scores"
+  - name: vw_google_ads_keywords
+    description: "Compat view → int_marketing__google_ads_keywords"
+  - name: vw_search_terms_waste
+    description: "Compat view → int_marketing__search_terms_waste"
+  - name: vw_seo_opportunities
+    description: "Compat view → int_marketing__seo_opportunities"
+  - name: vw_seo_content_gaps
+    description: "Compat view → int_marketing__seo_content_gaps"
+  - name: vw_seo_trends
+    description: "Compat view → int_marketing__seo_trends"
+  - name: vw_channel_summary
+    description: "Compat view → fct_marketing__channel_summary"
+  - name: vw_content_performance
+    description: "Compat view → int_marketing__content_performance"
+  - name: vw_google_ads_copy_performance
+    description: "Compat view → int_marketing__google_ads_copy_performance"
+  - name: vw_product_profitability
+    description: "Compat view → fct_marketing__product_profitability"
+  - name: vw_customer_ltv
+    description: "Compat view → fct_marketing__customer_ltv"

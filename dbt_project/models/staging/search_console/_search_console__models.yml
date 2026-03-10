@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: stg_search_console__performance
+    description: "Staged Search Console query performance data (multi-site)"
+    columns:
+      - name: query_date
+        tests: [not_null]
+      - name: query
+        tests: [not_null]
+      - name: site
+        tests: [not_null]

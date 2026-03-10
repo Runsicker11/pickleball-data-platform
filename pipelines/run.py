@@ -7,6 +7,10 @@ Usage:
     python -m pipelines.run amazon-ads --days 7 --reports campaigns
     python -m pipelines.run amazon-seller --days 30
     python -m pipelines.run amazon-seller --days 30 --destination duckdb
+    python -m pipelines.run shopify --days 3
+    python -m pipelines.run meta-ads --days 3
+    python -m pipelines.run google-ads --days 3
+    python -m pipelines.run search-console --days 7
 """
 
 import argparse
@@ -53,6 +57,68 @@ def main():
         "--dataset", default="raw_amazon", help="Target dataset name (default: raw_amazon)"
     )
 
+    # ── shopify ──────────────────────────────────────────────────────
+    sh_parser = subparsers.add_parser("shopify", help="Run Shopify pipeline")
+    sh_parser.add_argument(
+        "--days", type=int, default=3, help="Days of order history to pull (default: 3)"
+    )
+    sh_parser.add_argument(
+        "--destination",
+        choices=["bigquery", "duckdb"],
+        default="bigquery",
+        help="Load destination (default: bigquery)",
+    )
+    sh_parser.add_argument(
+        "--dataset", default="raw_shopify", help="Target dataset name (default: raw_shopify)"
+    )
+
+    # ── meta-ads ────────────────────────────────────────────────────
+    ma_parser = subparsers.add_parser("meta-ads", help="Run Meta Ads pipeline")
+    ma_parser.add_argument(
+        "--days", type=int, default=3, help="Days of insights to pull (default: 3)"
+    )
+    ma_parser.add_argument(
+        "--destination",
+        choices=["bigquery", "duckdb"],
+        default="bigquery",
+        help="Load destination (default: bigquery)",
+    )
+    ma_parser.add_argument(
+        "--dataset", default="raw_meta", help="Target dataset name (default: raw_meta)"
+    )
+
+    # ── google-ads ──────────────────────────────────────────────────
+    ga_parser = subparsers.add_parser("google-ads", help="Run Google Ads pipeline")
+    ga_parser.add_argument(
+        "--days", type=int, default=3, help="Days of insights to pull (default: 3)"
+    )
+    ga_parser.add_argument(
+        "--destination",
+        choices=["bigquery", "duckdb"],
+        default="bigquery",
+        help="Load destination (default: bigquery)",
+    )
+    ga_parser.add_argument(
+        "--dataset", default="raw_google_ads",
+        help="Target dataset name (default: raw_google_ads)",
+    )
+
+    # ── search-console ──────────────────────────────────────────────
+    sc_parser = subparsers.add_parser("search-console", help="Run Search Console pipeline")
+    sc_parser.add_argument(
+        "--days", type=int, default=7, help="Days of data to pull (default: 7)"
+    )
+    sc_parser.add_argument(
+        "--destination",
+        choices=["bigquery", "duckdb"],
+        default="bigquery",
+        help="Load destination (default: bigquery)",
+    )
+    sc_parser.add_argument(
+        "--dataset", default="raw_search_console",
+        help="Target dataset name (default: raw_search_console)",
+    )
+
     args = parser.parse_args()
 
     # Configure logging
@@ -82,6 +148,46 @@ def main():
 
     elif args.pipeline == "amazon-seller":
         from .amazon_seller.pipeline import run_pipeline
+
+        load_info = run_pipeline(
+            destination=args.destination,
+            dataset_name=args.dataset,
+            days_back=args.days,
+        )
+        print(f"\nPipeline finished. Load info:\n{load_info}")
+
+    elif args.pipeline == "shopify":
+        from .shopify.pipeline import run_pipeline
+
+        load_info = run_pipeline(
+            destination=args.destination,
+            dataset_name=args.dataset,
+            days_back=args.days,
+        )
+        print(f"\nPipeline finished. Load info:\n{load_info}")
+
+    elif args.pipeline == "meta-ads":
+        from .meta_ads.pipeline import run_pipeline
+
+        load_info = run_pipeline(
+            destination=args.destination,
+            dataset_name=args.dataset,
+            days_back=args.days,
+        )
+        print(f"\nPipeline finished. Load info:\n{load_info}")
+
+    elif args.pipeline == "google-ads":
+        from .google_ads.pipeline import run_pipeline
+
+        load_info = run_pipeline(
+            destination=args.destination,
+            dataset_name=args.dataset,
+            days_back=args.days,
+        )
+        print(f"\nPipeline finished. Load info:\n{load_info}")
+
+    elif args.pipeline == "search-console":
+        from .search_console.pipeline import run_pipeline
 
         load_info = run_pipeline(
             destination=args.destination,

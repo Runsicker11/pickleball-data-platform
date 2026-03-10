@@ -1,0 +1,45 @@
+version: 2
+
+sources:
+  - name: raw_google_ads
+    database: practical-gecko-373320
+    schema: raw_google_ads
+    description: "Raw Google Ads data loaded by dlt (campaigns, ad groups, keywords, daily insights, search terms)"
+    freshness:
+      warn_after: {count: 36, period: hour}
+      error_after: {count: 48, period: hour}
+    loaded_at_field: ingested_at
+    tables:
+      - name: campaigns
+        description: "Google Ads campaigns"
+        columns:
+          - name: campaign_id
+            tests: [not_null]
+
+      - name: ad_groups
+        description: "Google Ads ad groups"
+        columns:
+          - name: ad_group_id
+            tests: [not_null]
+
+      - name: keywords
+        description: "Google Ads keyword criteria"
+        columns:
+          - name: keyword_id
+            tests: [not_null]
+
+      - name: daily_insights
+        description: "Google Ads daily performance metrics per campaign"
+        columns:
+          - name: date_start
+            tests: [not_null]
+          - name: campaign_id
+            tests: [not_null]
+
+      - name: search_terms
+        description: "Google Ads search term report (actual queries triggering ads)"
+        columns:
+          - name: date_start
+            tests: [not_null]
+          - name: search_term
+            tests: [not_null]

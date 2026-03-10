@@ -14,3 +14,52 @@ models:
         tests: [not_null]
       - name: contribution
         description: "Net contribution after all costs"
+
+  - name: fct_marketing__channel_summary
+    description: "Materialized channel summary for dashboard KPIs"
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: channel
+        tests: [not_null]
+
+  - name: fct_marketing__enhanced_roas
+    description: "Materialized GA4-attributed ROAS by channel for trends"
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: channel
+        tests: [not_null]
+
+  - name: fct_marketing__product_profitability
+    description: "Materialized SKU-level profitability for P&L"
+
+  - name: fct_marketing__trends
+    description: "Materialized rolling averages for daily/weekly reports"
+    columns:
+      - name: report_date
+        tests: [not_null]
+
+  - name: fct_marketing__customer_ltv
+    description: "Cohort-based Customer Lifetime Value — 6-month avg gross profit for mature customers"
+    columns:
+      - name: cohort_month
+        tests: [not_null, unique]
+      - name: cohort_size
+        tests: [not_null]
+      - name: avg_ltv_6mo
+        description: "Average 6-month gross profit per customer in this cohort"
+      - name: avg_contribution_ltv_6mo
+        description: "Average 6-month contribution profit (after shipping) per customer"
+      - name: total_contribution_profit_6mo
+        description: "Total contribution profit across all customers in cohort"
+      - name: total_shipping_cost_6mo
+        description: "Total estimated shipping cost across all customers in cohort"
+      - name: cohort_contribution_margin
+        description: "Contribution profit as fraction of revenue for the cohort"
+
+  - name: dim_shopify__products
+    description: "Product dimension table with variant aggregations"
+    columns:
+      - name: product_id
+        tests: [not_null, unique]

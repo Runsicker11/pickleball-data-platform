@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: ga4
+    database: practical-gecko-373320
+    schema: analytics_456683467
+    description: "GA4 BigQuery export (external, not ingested by dlt)"
+    tables:
+      - name: events_*
+        description: "GA4 BigQuery export (date-sharded)"
+        loaded_at_field: _TABLE_SUFFIX
