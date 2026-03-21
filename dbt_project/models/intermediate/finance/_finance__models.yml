@@ -1,0 +1,100 @@
+version: 2
+
+models:
+  - name: int_finance__monthly_revenue
+    description: >
+      Monthly revenue by stream using QBO as single source of truth.
+      Invoices (Wholesale), Sales Receipts (Direct Sales), Deposits classified
+      by memo/source_summary (Amazon, Shopify, Affiliate, Sponsorship).
+    columns:
+      - name: month
+        tests: [not_null]
+      - name: revenue_stream
+        tests: [not_null]
+      - name: revenue
+        tests: [not_null]
+
+  - name: int_finance__monthly_expenses
+    description: >
+      Monthly expenses by category. Uses purchase line items joined with
+      the chart of accounts for proper expense categorization.
+    columns:
+      - name: month
+        tests: [not_null]
+      - name: expense_category
+        tests: [not_null]
+      - name: total_amount
+        tests: [not_null]
+
+  - name: int_finance__expense_by_vendor
+    description: >
+      Vendor spend analysis by month. Flags likely subscriptions
+      (3+ months with low variance in spend).
+    columns:
+      - name: vendor_name
+        tests: [not_null]
+      - name: month
+        tests: [not_null]
+      - name: total_spend
+        tests: [not_null]
+
+  - name: int_finance__wholesale_detail
+    description: >
+      Wholesale invoice line item detail joined with customer info
+      for product and customer analysis.
+    columns:
+      - name: line_item_id
+        tests: [not_null]
+      - name: invoice_id
+        tests: [not_null]
+
+  - name: int_finance__monthly_pnl
+    description: >
+      Monthly P&L summary — total revenue broken out by stream,
+      total expenses, net income, and net margin.
+    columns:
+      - name: month
+        tests: [not_null]
+      - name: total_revenue
+        tests: [not_null]
+      - name: net_income
+        description: "Total revenue minus total expenses"
+
+  - name: int_finance__affiliate_by_partner
+    description: >
+      Affiliate revenue by partner by month. Combines PayPal deposits
+      and bank deposits tagged as Affiliate Revenue, then matches to
+      partner names via memo keyword matching.
+    columns:
+      - name: month
+        tests: [not_null]
+      - name: partner_name
+        tests: [not_null]
+      - name: revenue
+        tests: [not_null]
+
+  - name: int_finance__expense_enriched
+    description: >
+      Monthly expenses enriched with high-level expense buckets
+      (COGS, Marketing, SaaS, etc.) and month-over-month change tracking.
+    columns:
+      - name: month
+        tests: [not_null]
+      - name: expense_category
+        tests: [not_null]
+      - name: expense_bucket
+        tests: [not_null]
+      - name: total_amount
+        tests: [not_null]
+
+  - name: int_finance__subscription_analysis
+    description: >
+      Subscription deep-dive — average monthly cost, annual projection,
+      and cost-cutting signals (price creep, possibly unused, high-cost).
+    columns:
+      - name: vendor_name
+        tests: [not_null, unique]
+      - name: avg_monthly_cost
+        tests: [not_null]
+      - name: annual_projection
+        tests: [not_null]

@@ -1,0 +1,5 @@
+name: bigquery
+type: bigquery
+options:
+  project_id: practical-gecko-373320
+  authenticator: gcloud-cli

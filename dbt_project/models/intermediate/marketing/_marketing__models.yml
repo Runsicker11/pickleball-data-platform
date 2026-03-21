@@ -95,6 +95,20 @@ models:
       - name: contribution_margin
         description: "Contribution profit as a fraction of net revenue"
 
+  - name: int_marketing__session_comparison
+    description: "Daily Shopify vs GA4 session and funnel comparison"
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: session_discrepancy_pct
+        description: "Fraction of Shopify sessions not captured by GA4 (expected 0.05-0.20)"
+      - name: ga4_coverage_rate
+        description: "GA4 sessions / Shopify sessions (expected 0.80-0.95)"
+      - name: shopify_conversion_rate
+        description: "Shopify orders / Shopify sessions"
+      - name: ga4_conversion_rate
+        description: "GA4 purchases / GA4 sessions"
+
   - name: int_marketing__customer_cohorts
     description: "Customer cohort assignment with order-level profitability and cumulative profit"
     columns:

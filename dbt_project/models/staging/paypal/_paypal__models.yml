@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: stg_paypal__transactions
+    description: "Staged PayPal transactions with parsed timestamps and decoded status"
+    columns:
+      - name: transaction_id
+        description: "Unique PayPal transaction ID"
+        tests:
+          - not_null
+          - unique
+      - name: transaction_at
+        description: "Transaction initiation timestamp (UTC)"
+      - name: transaction_date
+        description: "Transaction date (DATE)"
+      - name: transaction_amount
+        description: "Gross transaction amount (positive = received)"
+      - name: fee_amount
+        description: "PayPal fee (typically negative)"
+      - name: currency_code
+        description: "ISO currency code (e.g. USD)"
+      - name: transaction_status
+        description: "Decoded status: Success, Pending, Reversed, Denied, Failed"
+      - name: payer_alternate_name
+        description: "Business display name of the payer (most useful for partner attribution)"
+      - name: payer_full_name
+        description: "Derived full name from given + surname"

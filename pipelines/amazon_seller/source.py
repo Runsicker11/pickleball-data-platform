@@ -10,6 +10,7 @@ Resources:
 
 import logging
 import re
+import time
 from datetime import datetime, timedelta, timezone
 
 import dlt
@@ -94,18 +95,37 @@ def amazon_seller_source(
         primary_key=["amazon_order_id", "sku"],
     )
     def seller_orders():
-        for report_type in [
-            "GET_FLAT_FILE_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL",
-            "GET_FLAT_FILE_ALL_ORDERS_DATA_BY_LAST_UPDATE_GENERAL",
-        ]:
-            try:
-                rows = client.fetch_report(report_type, start_date, end_date)
-            except (requests.exceptions.HTTPError, SPAPIError) as e:
-                logger.warning(f"Skipping {report_type}: {e}")
-                continue
-            logger.info(f"{report_type}: {len(rows)} rows")
-            for row in rows:
-                yield _normalize_row(row)
+        chunk_days = 30
+        range_start = datetime.now(timezone.utc) - timedelta(days=days_back)
+        range_end = datetime.now(timezone.utc)
+
+        current_start = range_start
+        while current_start < range_end:
+            current_end = min(current_start + timedelta(days=chunk_days), range_end)
+            chunk_start_str = current_start.strftime("%Y-%m-%dT%H:%M:%SZ")
+            chunk_end_str = current_end.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            for report_type in [
+                "GET_FLAT_FILE_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL",
+                "GET_FLAT_FILE_ALL_ORDERS_DATA_BY_LAST_UPDATE_GENERAL",
+            ]:
+                try:
+                    rows = client.fetch_report(report_type, chunk_start_str, chunk_end_str)
+                except (requests.exceptions.HTTPError, SPAPIError) as e:
+                    logger.warning(
+                        f"Skipping {report_type} chunk "
+                        f"{chunk_start_str} to {chunk_end_str}: {e}"
+                    )
+                    continue
+                logger.info(
+                    f"{report_type} chunk {chunk_start_str} to "
+                    f"{chunk_end_str}: {len(rows)} rows"
+                )
+                for row in rows:
+                    yield _normalize_row(row)
+
+            time.sleep(60)
+            current_start = current_end
 
     # ── Resource 2: FBA Shipments ─────────────────────────────────
 
@@ -116,16 +136,36 @@ def amazon_seller_source(
         primary_key=["amazon_order_id", "sku", "shipment_id", "shipment_item_id"],
     )
     def seller_fba_shipments():
-        try:
-            rows = client.fetch_report(
-                "GET_AMAZON_FULFILLED_SHIPMENTS_DATA_GENERAL", start_date, end_date
+        chunk_days = 30
+        range_start = datetime.now(timezone.utc) - timedelta(days=days_back)
+        range_end = datetime.now(timezone.utc)
+
+        current_start = range_start
+        while current_start < range_end:
+            current_end = min(current_start + timedelta(days=chunk_days), range_end)
+            chunk_start_str = current_start.strftime("%Y-%m-%dT%H:%M:%SZ")
+            chunk_end_str = current_end.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            try:
+                rows = client.fetch_report(
+                    "GET_AMAZON_FULFILLED_SHIPMENTS_DATA_GENERAL", chunk_start_str, chunk_end_str
+                )
+            except (requests.exceptions.HTTPError, SPAPIError) as e:
+                logger.warning(
+                    f"Skipping FBA shipments chunk "
+                    f"{chunk_start_str} to {chunk_end_str}: {e}"
+                )
+                current_start = current_end
+                continue
+            logger.info(
+                f"FBA shipments chunk {chunk_start_str} to "
+                f"{chunk_end_str}: {len(rows)} rows"
             )
-        except (requests.exceptions.HTTPError, SPAPIError) as e:
-            logger.warning(f"Skipping FBA shipments: {e}")
-            return
-        logger.info(f"FBA shipments: {len(rows)} rows")
-        for row in rows:
-            yield _normalize_row(row)
+            for row in rows:
+                yield _normalize_row(row)
+
+            time.sleep(60)
+            current_start = current_end
 
     # ── Resource 3: Sales & Traffic (JSON) ────────────────────────
 

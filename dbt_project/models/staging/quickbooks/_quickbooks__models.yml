@@ -1,0 +1,82 @@
+version: 2
+
+models:
+  - name: stg_quickbooks__invoices
+    description: "Staged QuickBooks invoices with typed columns"
+    columns:
+      - name: invoice_id
+        tests: [not_null]
+      - name: txn_date
+        tests: [not_null]
+
+  - name: stg_quickbooks__invoice_line_items
+    description: "Staged QuickBooks invoice line items with typed columns"
+    columns:
+      - name: line_item_id
+        tests: [not_null]
+      - name: invoice_id
+        tests: [not_null]
+
+  - name: stg_quickbooks__payments
+    description: "Staged QuickBooks customer payments with typed columns"
+    columns:
+      - name: payment_id
+        tests: [not_null]
+      - name: txn_date
+        tests: [not_null]
+
+  - name: stg_quickbooks__sales_receipts
+    description: "Staged QuickBooks sales receipts with typed columns"
+    columns:
+      - name: sales_receipt_id
+        tests: [not_null]
+      - name: txn_date
+        tests: [not_null]
+
+  - name: stg_quickbooks__deposits
+    description: "Staged QuickBooks deposits with typed columns"
+    columns:
+      - name: deposit_id
+        tests: [not_null]
+      - name: txn_date
+        tests: [not_null]
+
+  - name: stg_quickbooks__purchases
+    description: "Staged QuickBooks purchases (expenses) with typed columns"
+    columns:
+      - name: purchase_id
+        tests: [not_null]
+      - name: txn_date
+        tests: [not_null]
+
+  - name: stg_quickbooks__purchase_line_items
+    description: "Staged QuickBooks purchase line items with expense account detail"
+    columns:
+      - name: line_item_id
+        tests: [not_null]
+      - name: purchase_id
+        tests: [not_null]
+
+  - name: stg_quickbooks__customers
+    description: "Staged QuickBooks customer records"
+    columns:
+      - name: customer_id
+        tests: [not_null]
+
+  - name: stg_quickbooks__vendors
+    description: "Staged QuickBooks vendor records"
+    columns:
+      - name: vendor_id
+        tests: [not_null]
+
+  - name: stg_quickbooks__accounts
+    description: "Staged QuickBooks chart of accounts"
+    columns:
+      - name: account_id
+        tests: [not_null]
+
+  - name: stg_quickbooks__items
+    description: "Staged QuickBooks product/service items"
+    columns:
+      - name: item_id
+        tests: [not_null]

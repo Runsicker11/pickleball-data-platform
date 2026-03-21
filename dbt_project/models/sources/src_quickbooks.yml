@@ -1,0 +1,101 @@
+version: 2
+
+sources:
+  - name: raw_quickbooks
+    database: practical-gecko-373320
+    schema: raw_quickbooks
+    description: "Raw QuickBooks Online data loaded by dlt"
+    freshness:
+      warn_after: {count: 36, period: hour}
+      error_after: {count: 48, period: hour}
+    loaded_at_field: ingested_at
+    tables:
+      - name: invoices
+        description: "QuickBooks invoices (wholesale revenue)"
+        columns:
+          - name: invoice_id
+            tests: [not_null]
+
+      - name: invoice_line_items
+        description: "Individual line items within QuickBooks invoices"
+        columns:
+          - name: line_item_id
+            tests: [not_null]
+          - name: invoice_id
+            tests: [not_null]
+
+      - name: payments
+        description: "QuickBooks customer payments"
+        columns:
+          - name: payment_id
+            tests: [not_null]
+
+      - name: sales_receipts
+        description: "QuickBooks sales receipts (point-of-sale transactions)"
+        columns:
+          - name: sales_receipt_id
+            tests: [not_null]
+
+      - name: deposits
+        description: "QuickBooks bank deposits (affiliate, sponsorship revenue)"
+        columns:
+          - name: deposit_id
+            tests: [not_null]
+
+      - name: purchases
+        description: "QuickBooks purchases (expenses, credit card charges)"
+        columns:
+          - name: purchase_id
+            tests: [not_null]
+
+      - name: purchase_line_items
+        description: "Individual line items within purchases with expense account detail"
+        columns:
+          - name: line_item_id
+            tests: [not_null]
+          - name: purchase_id
+            tests: [not_null]
+
+      - name: bills
+        description: "QuickBooks vendor bills"
+        columns:
+          - name: bill_id
+            tests: [not_null]
+
+      - name: bill_payments
+        description: "QuickBooks bill payments"
+        columns:
+          - name: bill_payment_id
+            tests: [not_null]
+
+      - name: customers
+        description: "QuickBooks customer records"
+        columns:
+          - name: customer_id
+            tests: [not_null]
+
+      - name: vendors
+        description: "QuickBooks vendor records"
+        columns:
+          - name: vendor_id
+            tests: [not_null]
+
+      - name: accounts
+        description: "QuickBooks chart of accounts"
+        columns:
+          - name: account_id
+            tests: [not_null]
+
+      - name: items
+        description: "QuickBooks product/service items"
+        columns:
+          - name: item_id
+            tests: [not_null]
+
+      - name: partner_mapping
+        description: "Affiliate partner mapping from Google Sheet (sender → partner brand)"
+        columns:
+          - name: sender_name
+            description: "Sender name from PayPal or bank memo"
+          - name: partner_brand
+            description: "Normalized partner brand name (user-maintained)"

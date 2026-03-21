@@ -1,0 +1,16 @@
+month,partner_name,payment_channel,revenue,transaction_count
+2025-01-01,Ronbus,Bank,297.50,1
+2025-01-01,CRBN,Bank,653.10,1
+2025-01-01,Joola,Bank,1754.54,1
+2025-01-01,PPA Tour,Bank,104.10,1
+2025-01-01,Unidentified,PayPal,28263.96,3
+2025-02-01,Ronbus,Bank,276.00,1
+2025-02-01,Joola,Bank,2454.42,2
+2025-02-01,Revolin Sports,Bank,38.16,1
+2025-02-01,Impact Radius,Bank,669.72,1
+2025-02-01,Unidentified,PayPal,47752.01,4
+2025-03-01,Ronbus,Bank,234.50,1
+2025-03-01,Joola,Bank,1067.46,1
+2025-03-01,Reload Technologies,Bank,948.90,1
+2025-03-01,Revolin Sports,Bank,19.80,1
+2025-03-01,Unidentified,PayPal,31966.87,5

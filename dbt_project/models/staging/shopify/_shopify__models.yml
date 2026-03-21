@@ -40,3 +40,13 @@ models:
     columns:
       - name: customer_id
         tests: [not_null]
+
+  - name: stg_shopify__sessions
+    description: "Staged Shopify sessions from ShopifyQL (daily by referrer source)"
+    columns:
+      - name: report_date
+        tests: [not_null]
+      - name: referrer_source
+        tests: [not_null]
+      - name: sessions
+        tests: [not_null]

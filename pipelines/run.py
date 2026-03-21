@@ -11,6 +11,8 @@ Usage:
     python -m pipelines.run meta-ads --days 3
     python -m pipelines.run google-ads --days 3
     python -m pipelines.run search-console --days 7
+    python -m pipelines.run quickbooks --days 90
+    python -m pipelines.run paypal --days 365
 """
 
 import argparse
@@ -119,6 +121,37 @@ def main():
         help="Target dataset name (default: raw_search_console)",
     )
 
+    # ── quickbooks ─────────────────────────────────────────────────
+    qb_parser = subparsers.add_parser("quickbooks", help="Run QuickBooks pipeline")
+    qb_parser.add_argument(
+        "--days", type=int, default=90, help="Days of history to pull (default: 90)"
+    )
+    qb_parser.add_argument(
+        "--destination",
+        choices=["bigquery", "duckdb"],
+        default="bigquery",
+        help="Load destination (default: bigquery)",
+    )
+    qb_parser.add_argument(
+        "--dataset", default="raw_quickbooks",
+        help="Target dataset name (default: raw_quickbooks)",
+    )
+
+    # ── paypal ──────────────────────────────────────────────────
+    pp_parser = subparsers.add_parser("paypal", help="Run PayPal pipeline")
+    pp_parser.add_argument(
+        "--days", type=int, default=365, help="Days of history to pull (default: 365)"
+    )
+    pp_parser.add_argument(
+        "--destination",
+        choices=["bigquery", "duckdb"],
+        default="bigquery",
+        help="Load destination (default: bigquery)",
+    )
+    pp_parser.add_argument(
+        "--dataset", default="raw_paypal", help="Target dataset name (default: raw_paypal)"
+    )
+
     args = parser.parse_args()
 
     # Configure logging
@@ -188,6 +221,26 @@ def main():
 
     elif args.pipeline == "search-console":
         from .search_console.pipeline import run_pipeline
+
+        load_info = run_pipeline(
+            destination=args.destination,
+            dataset_name=args.dataset,
+            days_back=args.days,
+        )
+        print(f"\nPipeline finished. Load info:\n{load_info}")
+
+    elif args.pipeline == "quickbooks":
+        from .quickbooks.pipeline import run_pipeline
+
+        load_info = run_pipeline(
+            destination=args.destination,
+            dataset_name=args.dataset,
+            days_back=args.days,
+        )
+        print(f"\nPipeline finished. Load info:\n{load_info}")
+
+    elif args.pipeline == "paypal":
+        from .paypal.pipeline import run_pipeline
 
         load_info = run_pipeline(
             destination=args.destination,

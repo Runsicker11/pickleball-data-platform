@@ -1,0 +1,16 @@
+month,expense_category,account_type,account_sub_type,is_owner_compensation,total_amount,transaction_count
+2025-01-01,Credit Card Expenses,Expense,OfficeGeneralAdministrativeExpenses,false,22294.44,2
+2025-01-01,Insurance,Expense,Insurance,false,827.65,1
+2025-01-01,Taxes & Licenses,Expense,TaxesPaid,false,4554.00,5
+2025-01-01,Payment Processing Fees,Expense,BankCharges,false,89.62,5
+2025-01-01,Contractor Services,Expense,CostOfLabor,false,1750.00,2
+2025-02-01,Inventory Purchases,Expense,SuppliesMaterialsCogs,false,23560.92,1
+2025-02-01,Credit Card Expenses,Expense,OfficeGeneralAdministrativeExpenses,false,6363.39,2
+2025-02-01,Insurance,Expense,Insurance,false,827.65,1
+2025-02-01,Payment Processing Fees,Expense,BankCharges,false,133.10,6
+2025-02-01,Contractor Services,Expense,CostOfLabor,false,3050.00,2
+2025-03-01,Inventory Purchases,Expense,SuppliesMaterialsCogs,false,7000.00,1
+2025-03-01,Credit Card Expenses,Expense,OfficeGeneralAdministrativeExpenses,false,6225.38,2
+2025-03-01,Insurance,Expense,Insurance,false,827.65,1
+2025-03-01,Payment Processing Fees,Expense,BankCharges,false,130.82,3
+2025-03-01,Contractor Services,Expense,CostOfLabor,false,7082.00,2

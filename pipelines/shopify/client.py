@@ -16,7 +16,7 @@ class ShopifyClient:
         client_id: str,
         client_secret: str,
         access_token: str = "",
-        api_version: str = "2024-10",
+        api_version: str = "2025-01",
     ):
         self.shop_domain = shop_domain
         self.client_id = client_id

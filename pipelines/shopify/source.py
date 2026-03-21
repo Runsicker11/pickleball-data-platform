@@ -1,4 +1,4 @@
-"""dlt source for Shopify — 5 resources: orders, line_items, products, variants, customers."""
+"""Shopify dlt source — orders, line_items, products, variants, customers, sessions."""
 
 import logging
 from datetime import date, datetime, timedelta, timezone
@@ -9,6 +9,28 @@ from .client import ShopifyClient
 from .helpers import gid_to_int, now_utc_str, parse_utms, safe_float
 
 logger = logging.getLogger(__name__)
+
+SESSIONS_QUERY_TEMPLATE = """
+FROM sessions
+  SHOW sessions, product_views, add_to_carts, checkouts, orders
+  GROUP BY day, referrer_source
+  SINCE -{days}d UNTIL today
+"""
+
+SESSIONS_GQL = """
+query ($query: String!) {
+  shopifyqlQuery(query: $query) {
+    __typename
+    ... on TableResponse {
+      tableData {
+        columns { name dataType }
+        rowData
+      }
+    }
+    parseErrors { code message range { start { line character } end { line character } } }
+  }
+}
+"""
 
 PRODUCTS_QUERY = """
 query ($cursor: String) {
@@ -49,10 +71,10 @@ def shopify_source(
     client_id: str = dlt.secrets.value,
     client_secret: str = dlt.secrets.value,
     access_token: str = "",
-    api_version: str = "2024-10",
+    api_version: str = "2025-01",
     days_back: int = 3,
 ):
-    """dlt source yielding 5 Shopify resources."""
+    """dlt source yielding 6 Shopify resources."""
     client = ShopifyClient(
         shop_domain=shop_domain,
         client_id=client_id,
@@ -67,6 +89,7 @@ def shopify_source(
     yield _products_resource(client)
     yield _product_variants_resource(client)
     yield _customers_resource(client)
+    yield _sessions_resource(client, days_back)
 
 
 def _orders_resource(client: ShopifyClient, since_date: date):
@@ -300,3 +323,38 @@ def _customers_resource(client: ShopifyClient):
             }
 
     return customers
+
+
+def _sessions_resource(client: ShopifyClient, days_back: int):
+    @dlt.resource(
+        name="shopify_sessions",
+        write_disposition="replace",
+    )
+    def sessions():
+        now_str = now_utc_str()
+        query = SESSIONS_QUERY_TEMPLATE.format(days=days_back)
+        data = client.graphql(SESSIONS_GQL, {"query": query})
+
+        response = data["shopifyqlQuery"]
+        if response["__typename"] != "TableResponse":
+            parse_errors = response.get("parseErrors", [])
+            raise RuntimeError(f"ShopifyQL query failed: {parse_errors}")
+
+        table = response["tableData"]
+        col_names = [c["name"] for c in table["columns"]]
+        logger.info(f"ShopifyQL sessions: {len(table['rowData'])} rows, columns={col_names}")
+
+        for row in table["rowData"]:
+            record = dict(zip(col_names, row))
+            yield {
+                "report_date": record.get("day"),
+                "referrer_source": record.get("referrer_source", ""),
+                "sessions": int(record.get("sessions", 0)),
+                "product_views": int(record.get("product_views", 0)),
+                "add_to_carts": int(record.get("add_to_carts", 0)),
+                "checkouts": int(record.get("checkouts", 0)),
+                "orders": int(record.get("orders", 0)),
+                "ingested_at": now_str,
+            }
+
+    return sessions

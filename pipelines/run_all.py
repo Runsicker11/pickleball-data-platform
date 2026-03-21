@@ -28,6 +28,8 @@ PIPELINES = {
     "search-console": ("pipelines.search_console.pipeline", 7, "raw_search_console"),
     "amazon-ads": ("pipelines.amazon_ads.pipeline", 7, "raw_amazon"),
     "amazon-seller": ("pipelines.amazon_seller.pipeline", 30, "raw_amazon"),
+    "quickbooks": ("pipelines.quickbooks.pipeline", 90, "raw_quickbooks"),
+    "paypal": ("pipelines.paypal.pipeline", 365, "raw_paypal"),
 }
 
 

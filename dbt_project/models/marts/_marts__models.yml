@@ -63,3 +63,57 @@ models:
     columns:
       - name: product_id
         tests: [not_null, unique]
+
+  - name: fct_finance__monthly_pnl
+    description: >
+      Monthly P&L — revenue by stream, total expenses, net income, net margin.
+      Core table for the finance overview dashboard.
+    columns:
+      - name: month
+        tests: [not_null]
+
+  - name: fct_finance__monthly_revenue
+    description: "Monthly revenue by stream (Wholesale, Shopify, Amazon, Affiliate, Sponsorship)"
+    columns:
+      - name: month
+        tests: [not_null]
+      - name: revenue_stream
+        tests: [not_null]
+
+  - name: fct_finance__expense_detail
+    description: "Monthly expenses by category from purchase line items"
+    columns:
+      - name: month
+        tests: [not_null]
+      - name: expense_category
+        tests: [not_null]
+
+  - name: fct_finance__expense_by_vendor
+    description: "Vendor spend by month with subscription detection"
+    columns:
+      - name: vendor_name
+        tests: [not_null]
+      - name: month
+        tests: [not_null]
+
+  - name: fct_finance__affiliate_by_partner
+    description: "Affiliate revenue by partner by month — PayPal + bank deposits matched to partner brands"
+    columns:
+      - name: month
+        tests: [not_null]
+      - name: partner_name
+        tests: [not_null]
+
+  - name: fct_finance__expense_enriched
+    description: "Monthly expenses with expense buckets and month-over-month changes"
+    columns:
+      - name: month
+        tests: [not_null]
+      - name: expense_bucket
+        tests: [not_null]
+
+  - name: fct_finance__subscription_analysis
+    description: "Subscription vendor analysis with cost projections and cost-cutting signals"
+    columns:
+      - name: vendor_name
+        tests: [not_null, unique]

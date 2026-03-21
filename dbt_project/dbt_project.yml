@@ -28,15 +28,47 @@ models:
       search_console:
         +schema: stg_search_console
         +materialized: view
+      quickbooks:
+        +schema: stg_quickbooks
+        +materialized: view
+      paypal:
+        +schema: stg_paypal
+        +materialized: view
     intermediate:
       +materialized: view
       amazon_ads:
         +schema: int_amazon
       marketing:
         +schema: int_marketing
+      finance:
+        +schema: int_finance
     marts:
       +schema: bi
       +materialized: table
     compat:
       +schema: marketing_data
       +materialized: view
+
+seeds:
+  pickleball_data_platform:
+    +schema: raw_bank
+    paypal_partner_mapping:
+      +schema: raw_paypal
+    paypal_txn_names:
+      +schema: raw_paypal
+    bank_statement_revenue:
+      +column_types:
+        month: date
+        revenue: float64
+        transaction_count: int64
+    bank_statement_expenses:
+      +column_types:
+        month: date
+        is_owner_compensation: boolean
+        total_amount: float64
+        transaction_count: int64
+    bank_statement_affiliate:
+      +column_types:
+        month: date
+        revenue: float64
+        transaction_count: int64

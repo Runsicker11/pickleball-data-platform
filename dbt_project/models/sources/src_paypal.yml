@@ -1,0 +1,17 @@
+version: 2
+
+sources:
+  - name: raw_paypal
+    database: practical-gecko-373320
+    schema: raw_paypal
+    description: "Raw PayPal transaction data loaded by dlt"
+    freshness:
+      warn_after: {count: 36, period: hour}
+      error_after: {count: 48, period: hour}
+    loaded_at_field: ingested_at
+    tables:
+      - name: transactions
+        description: "PayPal transaction history from the Reporting API"
+        columns:
+          - name: transaction_id
+            tests: [not_null, unique]
