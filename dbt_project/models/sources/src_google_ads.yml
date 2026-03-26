@@ -43,3 +43,57 @@ sources:
             tests: [not_null]
           - name: search_term
             tests: [not_null]
+
+      - name: bidding_strategy
+        description: "Google Ads bidding strategies with tCPA and tROAS targets"
+        columns:
+          - name: bidding_strategy_id
+            tests: [not_null]
+
+      - name: conversion_action
+        description: "Google Ads conversion actions and tracking configuration"
+        columns:
+          - name: conversion_action_id
+            tests: [not_null]
+
+      - name: shopping_performance
+        description: "Google Ads shopping performance by product (last 90 days, daily)"
+        columns:
+          - name: date_start
+            tests: [not_null]
+          - name: campaign_id
+            tests: [not_null]
+          - name: product_item_id
+            tests: [not_null]
+
+      - name: asset_group
+        description: "Google Ads PMAX asset groups"
+        columns:
+          - name: asset_group_id
+            tests: [not_null]
+
+      - name: asset_group_asset
+        description: "Google Ads PMAX asset group assets (headlines, descriptions, images, shopping feed)"
+        columns:
+          - name: asset_resource_name
+            tests: [not_null]
+
+      - name: campaign_asset_set
+        description: "Google Ads campaign asset set linkages — confirms shopping feed attached to PMAX"
+        columns:
+          - name: campaign_id
+            tests: [not_null]
+
+      - name: geographic_view
+        description: "Google Ads geographic performance by country (last 90 days, daily)"
+        columns:
+          - name: date_start
+            tests: [not_null]
+          - name: campaign_id
+            tests: [not_null]
+
+      - name: campaign_audience_view
+        description: "Google Ads campaign audience performance for observational audiences"
+        columns:
+          - name: resource_name
+            tests: [not_null]
