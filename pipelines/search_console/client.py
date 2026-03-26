@@ -34,16 +34,25 @@ class SearchConsoleClient:
         self._service = build("searchconsole", "v1", credentials=creds)
 
     def validate_access(self):
-        """Verify access to all configured sites."""
+        """Verify access and filter to only verified sites."""
         sites = self._service.sites().list().execute()
         available = [s.get("siteUrl") for s in sites.get("siteEntry", [])]
 
+        verified = []
         for target in self.site_urls:
             if target not in available:
-                raise RuntimeError(
-                    f"Site {target} not found in Search Console. Available: {available}"
+                logger.warning(
+                    f"Site {target!r} not found in Search Console (skipping). Available: {available}"
                 )
-            logger.info(f"Search Console access verified: {target}")
+            else:
+                logger.info(f"Search Console access verified: {target}")
+                verified.append(target)
+
+        if not verified:
+            raise RuntimeError(
+                f"None of the configured sites are accessible in Search Console. Available: {available}"
+            )
+        self.site_urls = verified
 
     @staticmethod
     def site_label(site_url: str) -> str:

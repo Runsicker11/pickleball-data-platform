@@ -575,18 +575,26 @@ def _auction_insights_resource(client: GoogleAdsApiClient, start_date: date, end
                 segments.date,
                 campaign.id,
                 campaign.name,
-                auction_insight_competitor.domain,
+                segments.auction_insight_domain,
                 metrics.auction_insight_search_impression_share,
-                metrics.auction_insight_overlap_rate,
-                metrics.auction_insight_position_above_rate,
-                metrics.auction_insight_top_of_page_rate,
-                metrics.auction_insight_outranking_share
+                metrics.auction_insight_search_overlap_rate,
+                metrics.auction_insight_search_position_above_rate,
+                metrics.auction_insight_search_top_impression_percentage,
+                metrics.auction_insight_search_outranking_share
             FROM campaign
             WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
                 AND campaign.status != 'REMOVED'
         """
-        for row in client.query(query):
-            domain = row.auction_insight_competitor.domain
+        try:
+            rows = client.query(query)
+        except Exception as exc:
+            # Auction insight metrics require competitive intelligence API access.
+            # Apply at: https://ads.google.com/intl/en_us/home/tools/manager-accounts/
+            logger.warning(f"auction_insights unavailable (developer token lacks competitive metrics access): {exc}")
+            return
+
+        for row in rows:
+            domain = row.segments.auction_insight_domain
             if not domain:
                 continue
             yield {
@@ -595,10 +603,10 @@ def _auction_insights_resource(client: GoogleAdsApiClient, start_date: date, end
                 "campaign_name": row.campaign.name,
                 "domain": domain,
                 "impression_share": row.metrics.auction_insight_search_impression_share or None,
-                "overlap_rate": row.metrics.auction_insight_overlap_rate or None,
-                "position_above_rate": row.metrics.auction_insight_position_above_rate or None,
-                "top_of_page_rate": row.metrics.auction_insight_top_of_page_rate or None,
-                "outranking_share": row.metrics.auction_insight_outranking_share or None,
+                "overlap_rate": row.metrics.auction_insight_search_overlap_rate or None,
+                "position_above_rate": row.metrics.auction_insight_search_position_above_rate or None,
+                "top_of_page_rate": row.metrics.auction_insight_search_top_impression_percentage or None,
+                "outranking_share": row.metrics.auction_insight_search_outranking_share or None,
                 "ingested_at": ingested,
             }
 
