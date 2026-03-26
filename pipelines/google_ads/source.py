@@ -1,4 +1,4 @@
-"""dlt source for Google Ads — 14 resources: campaigns, ad_groups, keywords, daily_insights, search_terms, bidding_strategy, conversion_action, shopping_performance, asset_group, asset_group_asset, campaign_asset_set, geographic_view, campaign_audience_view, auction_insights."""
+"""dlt source for Google Ads — 14 resources: campaigns, ad_groups, keywords, daily_insights, search_terms, bidding_strategy, conversion_action, shopping_performance, asset_group, asset_group_asset, campaign_asset_set, geographic_view, campaign_audience_view, ad_schedule_view."""
 
 import logging
 from datetime import date, timedelta
@@ -49,7 +49,7 @@ def google_ads_source(
     yield _campaign_asset_set_resource(client)
     yield _geographic_view_resource(client, start_date_90d, end_date)
     yield _campaign_audience_view_resource(client)
-    yield _auction_insights_resource(client, start_date_90d, end_date)
+    yield _ad_schedule_view_resource(client, start_date_90d, end_date)
 
 
 def _campaigns_resource(client: GoogleAdsApiClient):
@@ -611,3 +611,55 @@ def _auction_insights_resource(client: GoogleAdsApiClient, start_date: date, end
             }
 
     return auction_insights
+
+
+def _ad_schedule_view_resource(client: GoogleAdsApiClient, start_date: date, end_date: date):
+    @dlt.resource(
+        name="ad_schedule_view",
+        write_disposition="merge",
+        merge_key=["date_start", "campaign_id", "criterion_id"],
+        primary_key=["date_start", "campaign_id", "criterion_id"],
+    )
+    def ad_schedule_view():
+        ingested = now_utc_str()
+        query = f"""
+            SELECT
+                ad_schedule_view.resource_name,
+                campaign.id,
+                campaign.name,
+                campaign_criterion.ad_schedule.day_of_week,
+                campaign_criterion.ad_schedule.start_hour,
+                campaign_criterion.ad_schedule.end_hour,
+                campaign_criterion.ad_schedule.start_minute,
+                campaign_criterion.ad_schedule.end_minute,
+                campaign_criterion.criterion_id,
+                segments.date,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.conversions_value
+            FROM ad_schedule_view
+            WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
+                AND metrics.impressions > 0
+        """
+        for row in client.query(query):
+            yield {
+                "date_start": row.segments.date,
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "criterion_id": row.campaign_criterion.criterion_id,
+                "day_of_week": row.campaign_criterion.ad_schedule.day_of_week.name,
+                "start_hour": row.campaign_criterion.ad_schedule.start_hour,
+                "end_hour": row.campaign_criterion.ad_schedule.end_hour,
+                "start_minute": row.campaign_criterion.ad_schedule.start_minute.name,
+                "end_minute": row.campaign_criterion.ad_schedule.end_minute.name,
+                "impressions": row.metrics.impressions,
+                "clicks": row.metrics.clicks,
+                "cost": row.metrics.cost_micros / 1_000_000,
+                "conversions": row.metrics.conversions,
+                "conversions_value": row.metrics.conversions_value,
+                "ingested_at": ingested,
+            }
+
+    return ad_schedule_view

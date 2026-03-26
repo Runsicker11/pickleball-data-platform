@@ -99,11 +99,19 @@ sources:
             tests: [not_null]
 
       - name: auction_insights
-        description: "Google Ads auction insights — competitor impression share and overlap metrics (last 90 days, daily)"
+        description: "Google Ads auction insights — competitor impression share and overlap metrics (loaded via Google Ads Scripts → Google Sheets → BigQuery scheduled query)"
+        columns:
+          - name: date
+            tests: [not_null]
+          - name: campaign_id
+            tests: [not_null]
+          - name: competitor_domain
+            tests: [not_null]
+
+      - name: ad_schedule_view
+        description: "Google Ads ad schedule (dayparting) performance — impressions, clicks, cost by hour and day of week (last 90 days, daily)"
         columns:
           - name: date_start
             tests: [not_null]
           - name: campaign_id
-            tests: [not_null]
-          - name: domain
             tests: [not_null]

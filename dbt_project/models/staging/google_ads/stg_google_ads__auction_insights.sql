@@ -4,10 +4,10 @@ with source as (
 
 renamed as (
     select
-        cast(date_start as date) as date_start,
+        cast(date as date) as date,
         cast(campaign_id as int64) as campaign_id,
         campaign_name,
-        domain,
+        competitor_domain,
         cast(impression_share as float64) as impression_share,
         cast(overlap_rate as float64) as overlap_rate,
         cast(position_above_rate as float64) as position_above_rate,

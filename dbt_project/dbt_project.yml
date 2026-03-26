@@ -40,6 +40,9 @@ models:
       merchant_center:
         +schema: stg_merchant_center
         +materialized: view
+      klaviyo:
+        +schema: stg_klaviyo
+        +materialized: view
     intermediate:
       +materialized: view
       amazon_ads:

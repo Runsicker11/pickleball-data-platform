@@ -30,6 +30,7 @@ PIPELINES = {
     "amazon-seller": ("pipelines.amazon_seller.pipeline", 30, "raw_amazon"),
     "quickbooks": ("pipelines.quickbooks.pipeline", 90, "raw_quickbooks"),
     "paypal": ("pipelines.paypal.pipeline", 365, "raw_paypal"),
+    "klaviyo": ("pipelines.klaviyo.pipeline", 7, "raw_klaviyo"),
 }
 
 

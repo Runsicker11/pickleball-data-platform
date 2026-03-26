@@ -170,6 +170,7 @@ _upsert_job "pipeline-amazon-ads"       7200  "python -m pipelines.run amazon-ad
 _upsert_job "pipeline-amazon-seller"    3600  "python -m pipelines.run amazon-seller --days 30"
 _upsert_job "pipeline-quickbooks"       1800  "python -m pipelines.run quickbooks --days 90"
 _upsert_job "pipeline-paypal"           1800  "python -m pipelines.run paypal --days 365"
+_upsert_job "pipeline-klaviyo"          1800  "python -m pipelines.run klaviyo --days 7"
 
 # dbt job (runs after all pipelines complete)
 # dbt test and source freshness are non-fatal: failures are logged but don't fail the job
@@ -234,6 +235,7 @@ _upsert_scheduler "trigger-amazon-ads"       "0 6 * * *"    "pipeline-amazon-ads
 _upsert_scheduler "trigger-amazon-seller"    "0 6 * * *"    "pipeline-amazon-seller"
 _upsert_scheduler "trigger-quickbooks"       "0 6 * * *"    "pipeline-quickbooks"
 _upsert_scheduler "trigger-paypal"           "0 6 * * *"    "pipeline-paypal"
+_upsert_scheduler "trigger-klaviyo"          "0 6 * * *"    "pipeline-klaviyo"
 _upsert_scheduler "trigger-dbt"              "30 8 * * *"   "pipeline-dbt"
 
 # Analysis job: 9:00 AM UTC (after dbt finishes)

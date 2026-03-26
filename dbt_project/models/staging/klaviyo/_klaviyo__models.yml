@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: stg_klaviyo__campaigns
+    description: "Staged Klaviyo email campaigns with typed columns"
+    columns:
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: stg_klaviyo__campaign_metrics
+    description: "Staged aggregate send metrics per Klaviyo campaign"
+    columns:
+      - name: campaign_id
+        tests: [not_null]
+
+  - name: stg_klaviyo__flows
+    description: "Staged Klaviyo automation flows"
+    columns:
+      - name: flow_id
+        tests: [not_null]
+
+  - name: stg_klaviyo__metrics_timeline
+    description: "Staged daily aggregate email metrics (Opened Email, Clicked Email, Placed Order)"
+    columns:
+      - name: date
+        tests: [not_null]
+      - name: metric_name
+        tests: [not_null]

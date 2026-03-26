@@ -15,6 +15,7 @@ Usage:
     python -m pipelines.run paypal --days 365
     python -m pipelines.run google-trends
     python -m pipelines.run merchant-center
+    python -m pipelines.run klaviyo --days 7
 """
 
 import argparse
@@ -180,6 +181,21 @@ def main():
         help="Target dataset name (default: raw_merchant_center)",
     )
 
+    # ── klaviyo ─────────────────────────────────────────────────
+    kl_parser = subparsers.add_parser("klaviyo", help="Run Klaviyo email pipeline")
+    kl_parser.add_argument(
+        "--days", type=int, default=7, help="Days of history to pull (default: 7)"
+    )
+    kl_parser.add_argument(
+        "--destination",
+        choices=["bigquery", "duckdb"],
+        default="bigquery",
+        help="Load destination (default: bigquery)",
+    )
+    kl_parser.add_argument(
+        "--dataset", default="raw_klaviyo", help="Target dataset name (default: raw_klaviyo)"
+    )
+
     args = parser.parse_args()
 
     # Configure logging
@@ -292,6 +308,16 @@ def main():
         load_info = run_pipeline(
             destination=args.destination,
             dataset_name=args.dataset,
+        )
+        print(f"\nPipeline finished. Load info:\n{load_info}")
+
+    elif args.pipeline == "klaviyo":
+        from .klaviyo.pipeline import run_pipeline
+
+        load_info = run_pipeline(
+            destination=args.destination,
+            dataset_name=args.dataset,
+            days_back=args.days,
         )
         print(f"\nPipeline finished. Load info:\n{load_info}")
 
