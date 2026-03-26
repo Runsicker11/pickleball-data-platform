@@ -16,6 +16,23 @@
 #
 set -euo pipefail
 
+# ── Architecture ───────────────────────────────────────────────────────────
+#
+#  ALL data ingestion and transformation flows through this repo:
+#
+#    dlt pipelines (pipelines/)          → raw_*  BigQuery datasets
+#    dbt models    (dbt_project/)        → stg_*, int_*, bi, marketing_data (vw_*)
+#    ai-marketing  (../ai-marketing)     → reads marketing_data.vw_* (analysis only)
+#
+#  Daily schedule (UTC):
+#    6:00 AM  — all 8 pipelines run in parallel (shopify, meta-ads, google-ads,
+#               search-console, amazon-ads, amazon-seller, quickbooks, paypal)
+#    8:30 AM  — dbt  (transforms raw_* into staging → intermediate → mart/compat views)
+#    9:00 AM  — daily-analysis  (Claude-powered analysis reads marketing_data.vw_*)
+#
+#  The marketing_data.* BASE TABLEs from the old ai-marketing ingestion module
+#  have been removed. All data in marketing_data is now managed by dbt views.
+#
 # ── Configuration ──────────────────────────────────────────────────────────
 PROJECT_ID="practical-gecko-373320"
 REGION="us-west1"
