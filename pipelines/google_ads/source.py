@@ -1,4 +1,4 @@
-"""dlt source for Google Ads — 5 resources: campaigns, ad_groups, keywords, daily_insights, search_terms."""
+"""dlt source for Google Ads — 13 resources: campaigns, ad_groups, keywords, daily_insights, search_terms, bidding_strategy, conversion_action, shopping_performance, asset_group, asset_group_asset, campaign_asset_set, geographic_view, campaign_audience_view."""
 
 import logging
 from datetime import date, timedelta
@@ -21,7 +21,7 @@ def google_ads_source(
     login_customer_id: str = "",
     days_back: int = 3,
 ):
-    """dlt source yielding 5 Google Ads resources."""
+    """dlt source yielding 13 Google Ads resources."""
     client = GoogleAdsApiClient(
         customer_id=customer_id,
         developer_token=developer_token,
@@ -34,12 +34,21 @@ def google_ads_source(
 
     end_date = date.today() - timedelta(days=1)
     start_date = end_date - timedelta(days=days_back - 1)
+    start_date_90d = date.today() - timedelta(days=91)
 
     yield _campaigns_resource(client)
     yield _ad_groups_resource(client)
     yield _keywords_resource(client)
     yield _daily_insights_resource(client, start_date, end_date)
     yield _search_terms_resource(client, start_date, end_date)
+    yield _bidding_strategy_resource(client)
+    yield _conversion_action_resource(client)
+    yield _shopping_performance_resource(client, start_date_90d, end_date)
+    yield _asset_group_resource(client)
+    yield _asset_group_asset_resource(client)
+    yield _campaign_asset_set_resource(client)
+    yield _geographic_view_resource(client, start_date_90d, end_date)
+    yield _campaign_audience_view_resource(client)
 
 
 def _campaigns_resource(client: GoogleAdsApiClient):
@@ -272,3 +281,280 @@ def _search_terms_resource(client: GoogleAdsApiClient, start_date: date, end_dat
             }
 
     return search_terms
+
+
+def _bidding_strategy_resource(client: GoogleAdsApiClient):
+    @dlt.resource(name="bidding_strategy", write_disposition="replace")
+    def bidding_strategy():
+        ingested = now_utc_str()
+        # campaign fields are not selectable from the bidding_strategy resource
+        query = """
+            SELECT
+                bidding_strategy.id,
+                bidding_strategy.name,
+                bidding_strategy.type,
+                bidding_strategy.target_cpa.target_cpa_micros,
+                bidding_strategy.target_roas.target_roas,
+                bidding_strategy.maximize_conversions.target_cpa_micros
+            FROM bidding_strategy
+        """
+        for row in client.query(query):
+            yield {
+                "bidding_strategy_id": row.bidding_strategy.id,
+                "bidding_strategy_name": row.bidding_strategy.name,
+                "bidding_strategy_type": row.bidding_strategy.type_.name,
+                "target_cpa_micros": row.bidding_strategy.target_cpa.target_cpa_micros or None,
+                "target_roas": row.bidding_strategy.target_roas.target_roas or None,
+                "maximize_conversions_target_cpa_micros": row.bidding_strategy.maximize_conversions.target_cpa_micros or None,
+                "ingested_at": ingested,
+            }
+
+    return bidding_strategy
+
+
+def _conversion_action_resource(client: GoogleAdsApiClient):
+    @dlt.resource(name="conversion_action", write_disposition="replace")
+    def conversion_action():
+        ingested = now_utc_str()
+        query = """
+            SELECT
+                conversion_action.id,
+                conversion_action.name,
+                conversion_action.status,
+                conversion_action.type,
+                conversion_action.value_settings.default_value,
+                conversion_action.value_settings.always_use_default_value,
+                conversion_action.counting_type,
+                conversion_action.include_in_conversions_metric
+            FROM conversion_action
+        """
+        for row in client.query(query):
+            yield {
+                "conversion_action_id": row.conversion_action.id,
+                "conversion_action_name": row.conversion_action.name,
+                "status": row.conversion_action.status.name,
+                "conversion_type": row.conversion_action.type_.name,
+                "default_value": row.conversion_action.value_settings.default_value or None,
+                "always_use_default_value": row.conversion_action.value_settings.always_use_default_value,
+                "counting_type": row.conversion_action.counting_type.name,
+                "include_in_conversions_metric": row.conversion_action.include_in_conversions_metric,
+                "ingested_at": ingested,
+            }
+
+    return conversion_action
+
+
+def _shopping_performance_resource(client: GoogleAdsApiClient, start_date: date, end_date: date):
+    @dlt.resource(
+        name="shopping_performance",
+        write_disposition="merge",
+        merge_key=["date_start", "product_item_id", "campaign_id"],
+        primary_key=["date_start", "product_item_id", "campaign_id"],
+    )
+    def shopping_performance():
+        ingested = now_utc_str()
+        query = f"""
+            SELECT
+                segments.date,
+                segments.product_title,
+                segments.product_item_id,
+                segments.product_type_l1,
+                segments.product_brand,
+                campaign.id,
+                campaign.name,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.conversions_value
+            FROM shopping_performance_view
+            WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
+                AND metrics.impressions > 0
+        """
+        for row in client.query(query):
+            yield {
+                "date_start": row.segments.date,
+                "product_title": row.segments.product_title,
+                "product_item_id": row.segments.product_item_id,
+                "product_type_l1": row.segments.product_type_l1,
+                "product_brand": row.segments.product_brand,
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "impressions": row.metrics.impressions,
+                "clicks": row.metrics.clicks,
+                "spend": row.metrics.cost_micros / 1_000_000,
+                "conversions": row.metrics.conversions,
+                "conversion_value": row.metrics.conversions_value,
+                "ingested_at": ingested,
+            }
+
+    return shopping_performance
+
+
+def _asset_group_resource(client: GoogleAdsApiClient):
+    @dlt.resource(name="asset_group", write_disposition="replace")
+    def asset_group():
+        ingested = now_utc_str()
+        query = """
+            SELECT
+                asset_group.id,
+                asset_group.name,
+                asset_group.status,
+                asset_group.final_urls,
+                campaign.id,
+                campaign.name
+            FROM asset_group
+            WHERE asset_group.status != 'REMOVED'
+        """
+        for row in client.query(query):
+            yield {
+                "asset_group_id": row.asset_group.id,
+                "asset_group_name": row.asset_group.name,
+                "status": row.asset_group.status.name,
+                "final_urls": list(row.asset_group.final_urls),
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "ingested_at": ingested,
+            }
+
+    return asset_group
+
+
+def _asset_group_asset_resource(client: GoogleAdsApiClient):
+    @dlt.resource(name="asset_group_asset", write_disposition="replace")
+    def asset_group_asset():
+        ingested = now_utc_str()
+        query = """
+            SELECT
+                asset_group_asset.asset,
+                asset_group_asset.field_type,
+                asset_group_asset.status,
+                asset_group.id,
+                asset_group.name,
+                campaign.id,
+                campaign.name
+            FROM asset_group_asset
+            WHERE asset_group_asset.status != 'REMOVED'
+        """
+        for row in client.query(query):
+            yield {
+                "asset_resource_name": row.asset_group_asset.asset,
+                "field_type": row.asset_group_asset.field_type.name,
+                "status": row.asset_group_asset.status.name,
+                "asset_group_id": row.asset_group.id,
+                "asset_group_name": row.asset_group.name,
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "ingested_at": ingested,
+            }
+
+    return asset_group_asset
+
+
+def _campaign_asset_set_resource(client: GoogleAdsApiClient):
+    @dlt.resource(name="campaign_asset_set", write_disposition="replace")
+    def campaign_asset_set():
+        ingested = now_utc_str()
+        query = """
+            SELECT
+                campaign_asset_set.campaign,
+                campaign_asset_set.asset_set,
+                campaign_asset_set.status,
+                asset_set.id,
+                asset_set.name,
+                asset_set.type,
+                campaign.id,
+                campaign.name
+            FROM campaign_asset_set
+            WHERE campaign_asset_set.status != 'REMOVED'
+        """
+        for row in client.query(query):
+            yield {
+                "campaign_resource_name": row.campaign_asset_set.campaign,
+                "asset_set_resource_name": row.campaign_asset_set.asset_set,
+                "status": row.campaign_asset_set.status.name,
+                "asset_set_id": row.asset_set.id,
+                "asset_set_name": row.asset_set.name,
+                "asset_set_type": row.asset_set.type_.name,
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "ingested_at": ingested,
+            }
+
+    return campaign_asset_set
+
+
+def _geographic_view_resource(client: GoogleAdsApiClient, start_date: date, end_date: date):
+    @dlt.resource(
+        name="geographic_view",
+        write_disposition="merge",
+        merge_key=["date_start", "campaign_id", "country_criterion_id"],
+        primary_key=["date_start", "campaign_id", "country_criterion_id"],
+    )
+    def geographic_view():
+        ingested = now_utc_str()
+        query = f"""
+            SELECT
+                geographic_view.location_type,
+                geographic_view.country_criterion_id,
+                campaign.id,
+                campaign.name,
+                segments.date,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.conversions_value
+            FROM geographic_view
+            WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
+                AND metrics.impressions > 0
+        """
+        for row in client.query(query):
+            yield {
+                "date_start": row.segments.date,
+                "location_type": row.geographic_view.location_type.name,
+                "country_criterion_id": row.geographic_view.country_criterion_id,
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "impressions": row.metrics.impressions,
+                "clicks": row.metrics.clicks,
+                "spend": row.metrics.cost_micros / 1_000_000,
+                "conversions": row.metrics.conversions,
+                "conversion_value": row.metrics.conversions_value,
+                "ingested_at": ingested,
+            }
+
+    return geographic_view
+
+
+def _campaign_audience_view_resource(client: GoogleAdsApiClient):
+    @dlt.resource(name="campaign_audience_view", write_disposition="replace")
+    def campaign_audience_view():
+        ingested = now_utc_str()
+        # ad_group_criterion fields are not selectable from campaign_audience_view
+        query = """
+            SELECT
+                campaign_audience_view.resource_name,
+                campaign.id,
+                campaign.name,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.conversions_value
+            FROM campaign_audience_view
+        """
+        for row in client.query(query):
+            yield {
+                "resource_name": row.campaign_audience_view.resource_name,
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "impressions": row.metrics.impressions,
+                "clicks": row.metrics.clicks,
+                "spend": row.metrics.cost_micros / 1_000_000,
+                "conversions": row.metrics.conversions,
+                "conversion_value": row.metrics.conversions_value,
+                "ingested_at": ingested,
+            }
+
+    return campaign_audience_view
