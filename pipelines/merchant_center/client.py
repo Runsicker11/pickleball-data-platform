@@ -68,5 +68,5 @@ class MerchantCenterClient:
         return statuses
 
     def get_shopping_ads_program(self) -> dict:
-        """Return the Shopping Ads program status."""
+        """Return the Shopping Ads program status. Requires Administrator access."""
         return self._service.shoppingadsprogram().get(merchantId=self.merchant_id).execute()

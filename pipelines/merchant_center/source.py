@@ -106,6 +106,7 @@ def _shopping_ads_program_resource(client: MerchantCenterClient):
     def shopping_ads_program():
         ingested = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         data = client.get_shopping_ads_program()
+
         state = data.get("state", "")
         for region in data.get("regionStatuses", []):
             yield {
