@@ -13,6 +13,8 @@ Usage:
     python -m pipelines.run search-console --days 7
     python -m pipelines.run quickbooks --days 90
     python -m pipelines.run paypal --days 365
+    python -m pipelines.run google-trends
+    python -m pipelines.run merchant-center
 """
 
 import argparse
@@ -152,6 +154,32 @@ def main():
         "--dataset", default="raw_paypal", help="Target dataset name (default: raw_paypal)"
     )
 
+    # ── google-trends ───────────────────────────────────────────
+    gt_parser = subparsers.add_parser("google-trends", help="Run Google Trends pipeline (weekly, 5-year history)")
+    gt_parser.add_argument(
+        "--destination",
+        choices=["bigquery", "duckdb"],
+        default="bigquery",
+        help="Load destination (default: bigquery)",
+    )
+    gt_parser.add_argument(
+        "--dataset", default="raw_google_trends",
+        help="Target dataset name (default: raw_google_trends)",
+    )
+
+    # ── merchant-center ─────────────────────────────────────────
+    mc_parser = subparsers.add_parser("merchant-center", help="Run Merchant Center pipeline")
+    mc_parser.add_argument(
+        "--destination",
+        choices=["bigquery", "duckdb"],
+        default="bigquery",
+        help="Load destination (default: bigquery)",
+    )
+    mc_parser.add_argument(
+        "--dataset", default="raw_merchant_center",
+        help="Target dataset name (default: raw_merchant_center)",
+    )
+
     args = parser.parse_args()
 
     # Configure logging
@@ -246,6 +274,24 @@ def main():
             destination=args.destination,
             dataset_name=args.dataset,
             days_back=args.days,
+        )
+        print(f"\nPipeline finished. Load info:\n{load_info}")
+
+    elif args.pipeline == "google-trends":
+        from .google_trends.pipeline import run_pipeline
+
+        load_info = run_pipeline(
+            destination=args.destination,
+            dataset_name=args.dataset,
+        )
+        print(f"\nPipeline finished. Load info:\n{load_info}")
+
+    elif args.pipeline == "merchant-center":
+        from .merchant_center.pipeline import run_pipeline
+
+        load_info = run_pipeline(
+            destination=args.destination,
+            dataset_name=args.dataset,
         )
         print(f"\nPipeline finished. Load info:\n{load_info}")
 

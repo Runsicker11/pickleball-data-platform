@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_merchant_center__products
+    description: "Staged Merchant Center product catalog with attributes and custom labels"
+    columns:
+      - name: product_id
+        tests: [not_null]
+
+  - name: stg_merchant_center__product_statuses
+    description: "Staged Merchant Center product approval status and item-level issues"
+    columns:
+      - name: product_id
+        tests: [not_null]
+      - name: approval_status
+        tests: [not_null]
+
+  - name: stg_merchant_center__shopping_ads_program
+    description: "Staged Merchant Center Shopping Ads program state and regional eligibility"
+    columns:
+      - name: state
+        tests: [not_null]

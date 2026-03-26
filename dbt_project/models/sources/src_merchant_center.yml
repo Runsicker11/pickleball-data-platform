@@ -1,0 +1,29 @@
+version: 2
+
+sources:
+  - name: raw_merchant_center
+    database: practical-gecko-373320
+    schema: raw_merchant_center
+    description: "Raw Merchant Center data loaded by dlt (products, product statuses, shopping ads program)"
+    freshness:
+      warn_after: {count: 36, period: hour}
+      error_after: {count: 48, period: hour}
+    loaded_at_field: ingested_at
+    tables:
+      - name: products
+        description: "Merchant Center product catalog — full feed with attributes and custom labels"
+        columns:
+          - name: product_id
+            tests: [not_null]
+
+      - name: product_statuses
+        description: "Merchant Center product approval status and disapproval issues"
+        columns:
+          - name: product_id
+            tests: [not_null]
+
+      - name: shopping_ads_program
+        description: "Merchant Center Shopping Ads program state and regional eligibility"
+        columns:
+          - name: state
+            tests: [not_null]

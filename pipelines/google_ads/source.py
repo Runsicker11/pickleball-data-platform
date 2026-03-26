@@ -1,4 +1,4 @@
-"""dlt source for Google Ads — 13 resources: campaigns, ad_groups, keywords, daily_insights, search_terms, bidding_strategy, conversion_action, shopping_performance, asset_group, asset_group_asset, campaign_asset_set, geographic_view, campaign_audience_view."""
+"""dlt source for Google Ads — 14 resources: campaigns, ad_groups, keywords, daily_insights, search_terms, bidding_strategy, conversion_action, shopping_performance, asset_group, asset_group_asset, campaign_asset_set, geographic_view, campaign_audience_view, auction_insights."""
 
 import logging
 from datetime import date, timedelta
@@ -49,6 +49,7 @@ def google_ads_source(
     yield _campaign_asset_set_resource(client)
     yield _geographic_view_resource(client, start_date_90d, end_date)
     yield _campaign_audience_view_resource(client)
+    yield _auction_insights_resource(client, start_date_90d, end_date)
 
 
 def _campaigns_resource(client: GoogleAdsApiClient):
@@ -558,3 +559,55 @@ def _campaign_audience_view_resource(client: GoogleAdsApiClient):
             }
 
     return campaign_audience_view
+
+
+def _auction_insights_resource(client: GoogleAdsApiClient, start_date: date, end_date: date):
+    @dlt.resource(
+        name="auction_insights",
+        write_disposition="merge",
+        merge_key=["date_start", "campaign_id", "domain"],
+        primary_key=["date_start", "campaign_id", "domain"],
+    )
+    def auction_insights():
+        ingested = now_utc_str()
+        query = f"""
+            SELECT
+                segments.date,
+                campaign.id,
+                campaign.name,
+                segments.auction_insight_domain,
+                metrics.auction_insight_search_impression_share,
+                metrics.auction_insight_search_overlap_rate,
+                metrics.auction_insight_search_position_above_rate,
+                metrics.auction_insight_search_top_impression_percentage,
+                metrics.auction_insight_search_outranking_share
+            FROM campaign
+            WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
+                AND campaign.status != 'REMOVED'
+        """
+        try:
+            rows = client.query(query)
+        except Exception as exc:
+            # Auction insight metrics require competitive intelligence API access.
+            # Apply at: https://ads.google.com/intl/en_us/home/tools/manager-accounts/
+            logger.warning(f"auction_insights unavailable (developer token lacks competitive metrics access): {exc}")
+            return
+
+        for row in rows:
+            domain = row.segments.auction_insight_domain
+            if not domain:
+                continue
+            yield {
+                "date_start": row.segments.date,
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "domain": domain,
+                "impression_share": row.metrics.auction_insight_search_impression_share or None,
+                "overlap_rate": row.metrics.auction_insight_search_overlap_rate or None,
+                "position_above_rate": row.metrics.auction_insight_search_position_above_rate or None,
+                "top_of_page_rate": row.metrics.auction_insight_search_top_impression_percentage or None,
+                "outranking_share": row.metrics.auction_insight_search_outranking_share or None,
+                "ingested_at": ingested,
+            }
+
+    return auction_insights
