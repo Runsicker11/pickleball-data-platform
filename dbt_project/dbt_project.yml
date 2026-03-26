@@ -34,6 +34,12 @@ models:
       paypal:
         +schema: stg_paypal
         +materialized: view
+      google_trends:
+        +schema: stg_google_trends
+        +materialized: view
+      merchant_center:
+        +schema: stg_merchant_center
+        +materialized: view
     intermediate:
       +materialized: view
       amazon_ads:

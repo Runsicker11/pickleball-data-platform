@@ -1,0 +1,27 @@
+version: 2
+
+sources:
+  - name: raw_google_trends
+    database: practical-gecko-373320
+    schema: raw_google_trends
+    description: "Raw Google Trends data loaded by dlt (interest over time, related queries)"
+    freshness:
+      warn_after: {count: 8, period: day}
+      error_after: {count: 14, period: day}
+    loaded_at_field: ingested_at
+    tables:
+      - name: interest_over_time
+        description: "Weekly interest scores (0-100) for tracked pickleball keywords — 5-year history, US only"
+        columns:
+          - name: week
+            tests: [not_null]
+          - name: keyword
+            tests: [not_null]
+
+      - name: related_queries
+        description: "Top and rising related queries for each tracked pickleball keyword"
+        columns:
+          - name: keyword
+            tests: [not_null]
+          - name: query_type
+            tests: [not_null]

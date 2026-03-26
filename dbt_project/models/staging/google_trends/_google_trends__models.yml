@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_google_trends__interest_over_time
+    description: "Staged Google Trends weekly interest scores (0-100) for tracked pickleball keywords"
+    columns:
+      - name: week
+        tests: [not_null]
+      - name: keyword
+        tests: [not_null]
+      - name: interest_score
+        tests: [not_null]
+
+  - name: stg_google_trends__related_queries
+    description: "Staged Google Trends top and rising related queries for each tracked keyword"
+    columns:
+      - name: keyword
+        tests: [not_null]
+      - name: query_type
+        tests: [not_null]
+      - name: related_query
+        tests: [not_null]
