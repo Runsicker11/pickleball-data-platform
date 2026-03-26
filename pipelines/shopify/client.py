@@ -1,6 +1,7 @@
 """Shopify REST + GraphQL API client with auth and pagination."""
 
 import logging
+import time
 
 import requests
 
@@ -76,6 +77,11 @@ class ShopifyClient:
             resp = self._session.get(
                 url, params=params if page == 1 else None, timeout=60
             )
+            if resp.status_code == 429:
+                retry_after = int(float(resp.headers.get("Retry-After", 10)))
+                logger.warning(f"Page {page}: rate limited (429), waiting {retry_after}s")
+                time.sleep(retry_after)
+                continue
             resp.raise_for_status()
             items = resp.json().get(key, [])
             all_data.extend(items)

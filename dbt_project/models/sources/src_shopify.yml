@@ -47,9 +47,4 @@ sources:
             tests: [not_null]
 
       - name: shopify_sessions
-        description: "Shopify sessions from ShopifyQL (daily by referrer source)"
-        columns:
-          - name: report_date
-            tests: [not_null]
-          - name: referrer_source
-            tests: [not_null]
+        description: "Shopify sessions from ShopifyQL — requires Shopify Plus (disabled)"

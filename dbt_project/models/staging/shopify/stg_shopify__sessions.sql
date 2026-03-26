@@ -1,3 +1,6 @@
+-- Disabled: requires Shopify Plus (shopifyqlQuery GraphQL API not available on this plan)
+{{ config(enabled=False) }}
+
 with source as (
     select * from {{ source('raw_shopify', 'shopify_sessions') }}
 ),

@@ -1,3 +1,6 @@
+-- Disabled: depends on stg_shopify__sessions which requires Shopify Plus
+{{ config(enabled=False) }}
+
 -- Daily Shopify vs GA4 session/funnel comparison
 -- Expected: GA4 captures ~80-95% of Shopify sessions (ad blockers, cookie consent, differing definitions)
 

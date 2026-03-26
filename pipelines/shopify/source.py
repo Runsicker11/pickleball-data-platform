@@ -333,7 +333,13 @@ def _sessions_resource(client: ShopifyClient, days_back: int):
     def sessions():
         now_str = now_utc_str()
         query = SESSIONS_QUERY_TEMPLATE.format(days=days_back)
-        data = client.graphql(SESSIONS_GQL, {"query": query})
+        try:
+            data = client.graphql(SESSIONS_GQL, {"query": query})
+        except RuntimeError as e:
+            if "shopifyqlQuery" in str(e) or "doesn't exist" in str(e):
+                logger.warning("ShopifyQL not available on this Shopify plan — skipping sessions")
+                return
+            raise
 
         response = data["shopifyqlQuery"]
         if response["__typename"] != "TableResponse":
