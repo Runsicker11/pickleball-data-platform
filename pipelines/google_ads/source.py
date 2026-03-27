@@ -1,4 +1,4 @@
-"""dlt source for Google Ads — 14 resources: campaigns, ad_groups, keywords, daily_insights, search_terms, bidding_strategy, conversion_action, shopping_performance, asset_group, asset_group_asset, campaign_asset_set, geographic_view, campaign_audience_view, ad_schedule_view."""
+"""dlt source for Google Ads — 17 resources: campaigns, ad_groups, keywords, daily_insights, search_terms, bidding_strategy, conversion_action, shopping_performance, asset_group, asset_group_asset, campaign_asset_set, geographic_view, campaign_audience_view, ad_schedule_view, campaign_negative_keywords, ad_group_negative_keywords, pmax_insights."""
 
 import logging
 from datetime import date, timedelta
@@ -21,7 +21,7 @@ def google_ads_source(
     login_customer_id: str = "",
     days_back: int = 3,
 ):
-    """dlt source yielding 13 Google Ads resources."""
+    """dlt source yielding 17 Google Ads resources."""
     client = GoogleAdsApiClient(
         customer_id=customer_id,
         developer_token=developer_token,
@@ -50,6 +50,9 @@ def google_ads_source(
     yield _geographic_view_resource(client, start_date_90d, end_date)
     yield _campaign_audience_view_resource(client)
     yield _ad_schedule_view_resource(client, start_date_90d, end_date)
+    yield _campaign_negative_keywords_resource(client)
+    yield _ad_group_negative_keywords_resource(client)
+    yield _pmax_insights_resource(client, start_date, end_date)
 
 
 def _campaigns_resource(client: GoogleAdsApiClient):
@@ -663,3 +666,110 @@ def _ad_schedule_view_resource(client: GoogleAdsApiClient, start_date: date, end
             }
 
     return ad_schedule_view
+
+
+def _campaign_negative_keywords_resource(client: GoogleAdsApiClient):
+    @dlt.resource(name="campaign_negative_keywords", write_disposition="replace")
+    def campaign_negative_keywords():
+        ingested = now_utc_str()
+        query = """
+            SELECT
+                campaign_criterion.criterion_id,
+                campaign_criterion.keyword.text,
+                campaign_criterion.keyword.match_type,
+                campaign_criterion.status,
+                campaign.id,
+                campaign.name
+            FROM campaign_criterion
+            WHERE campaign_criterion.type = 'KEYWORD'
+              AND campaign_criterion.negative = TRUE
+              AND campaign_criterion.status != 'REMOVED'
+        """
+        for row in client.query(query):
+            yield {
+                "criterion_id": row.campaign_criterion.criterion_id,
+                "keyword_text": row.campaign_criterion.keyword.text,
+                "match_type": row.campaign_criterion.keyword.match_type.name,
+                "status": row.campaign_criterion.status.name,
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "ingested_at": ingested,
+            }
+
+    return campaign_negative_keywords
+
+
+def _ad_group_negative_keywords_resource(client: GoogleAdsApiClient):
+    @dlt.resource(name="ad_group_negative_keywords", write_disposition="replace")
+    def ad_group_negative_keywords():
+        ingested = now_utc_str()
+        query = """
+            SELECT
+                ad_group_criterion.criterion_id,
+                ad_group_criterion.keyword.text,
+                ad_group_criterion.keyword.match_type,
+                ad_group_criterion.status,
+                ad_group.id,
+                ad_group.name,
+                campaign.id,
+                campaign.name
+            FROM ad_group_criterion
+            WHERE ad_group_criterion.type = 'KEYWORD'
+              AND ad_group_criterion.negative = TRUE
+              AND ad_group_criterion.status != 'REMOVED'
+        """
+        for row in client.query(query):
+            yield {
+                "criterion_id": row.ad_group_criterion.criterion_id,
+                "keyword_text": row.ad_group_criterion.keyword.text,
+                "match_type": row.ad_group_criterion.keyword.match_type.name,
+                "status": row.ad_group_criterion.status.name,
+                "ad_group_id": row.ad_group.id,
+                "ad_group_name": row.ad_group.name,
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "ingested_at": ingested,
+            }
+
+    return ad_group_negative_keywords
+
+
+def _pmax_insights_resource(client: GoogleAdsApiClient, start_date: date, end_date: date):
+    @dlt.resource(
+        name="pmax_insights",
+        write_disposition="merge",
+        merge_key=["date_start", "campaign_id"],
+        primary_key=["date_start", "campaign_id"],
+    )
+    def pmax_insights():
+        ingested = now_utc_str()
+        # PMAX campaigns don't have ad groups — must query from campaign resource directly
+        query = f"""
+            SELECT
+                segments.date,
+                campaign.id,
+                campaign.name,
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.conversions_value
+            FROM campaign
+            WHERE campaign.advertising_channel_type = 'PERFORMANCE_MAX'
+              AND campaign.status = 'ENABLED'
+              AND segments.date BETWEEN '{start_date}' AND '{end_date}'
+        """
+        for row in client.query(query):
+            yield {
+                "date_start": row.segments.date,
+                "campaign_id": row.campaign.id,
+                "campaign_name": row.campaign.name,
+                "impressions": row.metrics.impressions,
+                "clicks": row.metrics.clicks,
+                "spend": row.metrics.cost_micros / 1_000_000,
+                "conversions": row.metrics.conversions,
+                "conversion_value": row.metrics.conversions_value,
+                "ingested_at": ingested,
+            }
+
+    return pmax_insights

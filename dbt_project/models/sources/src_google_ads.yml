@@ -115,3 +115,29 @@ sources:
             tests: [not_null]
           - name: campaign_id
             tests: [not_null]
+
+      - name: campaign_negative_keywords
+        description: "Campaign-level negative keywords — keywords explicitly excluded at the campaign level"
+        columns:
+          - name: criterion_id
+            tests: [not_null]
+          - name: campaign_id
+            tests: [not_null]
+
+      - name: ad_group_negative_keywords
+        description: "Ad group-level negative keywords — keywords explicitly excluded at the ad group level"
+        columns:
+          - name: criterion_id
+            tests: [not_null]
+          - name: ad_group_id
+            tests: [not_null]
+          - name: campaign_id
+            tests: [not_null]
+
+      - name: pmax_insights
+        description: "Performance Max campaign daily metrics — queried at campaign level since PMAX has no traditional ad groups"
+        columns:
+          - name: date_start
+            tests: [not_null]
+          - name: campaign_id
+            tests: [not_null]
