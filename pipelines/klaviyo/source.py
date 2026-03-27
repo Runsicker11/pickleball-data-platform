@@ -64,78 +64,49 @@ def _campaign_metrics_resource(client: KlaviyoClient):
         write_disposition="merge",
         merge_key=["campaign_id"],
         primary_key=["campaign_id"],
-        columns={
-            "recipients": {"data_type": "bigint", "nullable": True},
-            "opens": {"data_type": "double", "nullable": True},
-            "clicks": {"data_type": "double", "nullable": True},
-            "revenue": {"data_type": "double", "nullable": True},
-            "unsubscribes": {"data_type": "double", "nullable": True},
-        },
     )
     def campaign_metrics():
         ingested = _now_utc_str()
 
-        # Pull all sent campaigns
-        params = {
-            "filter": "and(equals(messages.channel,'email'),equals(status,'Sent'))",
+        # campaign-values-reports returns all per-campaign stats in one call.
+        # Use a wide timeframe to cover the full account history.
+        payload = {
+            "data": {
+                "type": "campaign-values-report",
+                "attributes": {
+                    "timeframe": {"key": "last_12_months"},
+                    "conversion_metric_id": "VnPFBW",  # Placed Order
+                    "statistics": [
+                        "opens", "clicks", "unsubscribes",
+                        "delivered", "recipients", "conversion_value", "conversions",
+                    ],
+                },
+            }
         }
-        sent_campaigns = list(client.paginate("/campaigns/", params=params))
+        result = client.post("/campaign-values-reports/", payload)
+        rows = (result.get("data") or {}).get("attributes", {}).get("results", [])
 
-        # Get metric IDs for opens, clicks, revenue, unsubscribes
-        metric_map = _get_metric_map(client, {"Opened Email", "Clicked Email", "Placed Order", "Unsubscribed"})
+        # Build a name lookup from the campaigns list
+        campaigns_list = list(client.paginate("/campaigns/", params={"filter": "equals(messages.channel,'email')"}))
+        name_map = {c["id"]: (c.get("attributes") or {}).get("name") for c in campaigns_list}
+        send_time_map = {c["id"]: (c.get("attributes") or {}).get("send_time") for c in campaigns_list}
 
-        for item in sent_campaigns:
-            campaign_id = item.get("id")
-            attrs = item.get("attributes") or {}
-            campaign_name = attrs.get("name")
-            send_time = attrs.get("send_time")
-
-            # Recipient count
-            recipients = None
-            try:
-                est = client.get(f"/campaign-recipient-estimation/{campaign_id}/")
-                recipients = (est.get("data") or {}).get("attributes", {}).get("estimated_recipient_count")
-            except Exception as exc:
-                logger.warning("Could not get recipients for campaign %s: %s", campaign_id, exc)
-
-            # Aggregate metrics via metric-aggregates endpoint
-            metric_totals: dict[str, float] = {}
-            send_date_str = (send_time or "")[:10]
-            if send_date_str:
-                for metric_name, metric_id in metric_map.items():
-                    try:
-                        payload = {
-                            "data": {
-                                "type": "metric-aggregate",
-                                "attributes": {
-                                    "metric_id": metric_id,
-                                    "measurements": ["count", "sum_value"],
-                                    "interval": "month",
-                                    "filter": (
-                                        f"greater-or-equal(datetime,{send_date_str}T00:00:00+00:00),"
-                                        f"less-than(datetime,{date.today().isoformat()}T23:59:59+00:00),"
-                                        f"equals(attributed_message.parent_id,\"{campaign_id}\")"
-                                    ),
-                                },
-                            }
-                        }
-                        result = client.post("/metric-aggregates/", payload)
-                        rows = (result.get("data") or {}).get("attributes", {}).get("data", [])
-                        counts = (rows[0].get("measurements", {}).get("count", []) if rows else [])
-                        metric_totals[metric_name] = sum(v for v in counts if v is not None)
-
-                    except Exception as exc:
-                        logger.warning("Could not get %s for campaign %s: %s", metric_name, campaign_id, exc)
-
+        for row in rows:
+            groupings = row.get("groupings") or {}
+            stats = row.get("statistics") or {}
+            campaign_id = groupings.get("campaign_id")
+            send_time = send_time_map.get(campaign_id, "")
             yield {
                 "campaign_id": campaign_id,
-                "campaign_name": campaign_name,
-                "send_date": send_date_str or None,
-                "recipients": recipients,
-                "opens": metric_totals.get("Opened Email"),
-                "clicks": metric_totals.get("Clicked Email"),
-                "revenue": metric_totals.get("Placed Order"),
-                "unsubscribes": metric_totals.get("Unsubscribed"),
+                "campaign_name": name_map.get(campaign_id),
+                "send_date": send_time[:10] if send_time else None,
+                "recipients": stats.get("recipients"),
+                "delivered": stats.get("delivered"),
+                "opens": stats.get("opens"),
+                "clicks": stats.get("clicks"),
+                "unsubscribes": stats.get("unsubscribes"),
+                "conversions": stats.get("conversions"),
+                "revenue": stats.get("conversion_value"),
                 "ingested_at": ingested,
             }
 
