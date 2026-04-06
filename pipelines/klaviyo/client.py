@@ -9,7 +9,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-_RATE_LIMIT_SLEEP = 2  # seconds to wait on 429
+_RATE_LIMIT_SLEEP = 10  # seconds to wait on 429
 
 
 class KlaviyoClient:

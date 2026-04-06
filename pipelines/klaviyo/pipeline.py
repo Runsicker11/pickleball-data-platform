@@ -19,16 +19,18 @@ def run_pipeline(
     destination: str = "bigquery",
     dataset_name: str = "raw_klaviyo",
     days_back: int | None = None,
+    full_profile_sync: bool = False,
 ) -> dlt.pipeline:
     """Run the Klaviyo dlt pipeline.
 
     Args:
         destination: "bigquery" or "duckdb"
         dataset_name: Target dataset name
-        days_back: Override for rolling window
+        days_back: Override for rolling window (default: PIPELINE_ROLLING_DAYS)
+        full_profile_sync: Pull all profiles since account creation (use once for backfill)
     """
     if days_back is None:
-        days_back = PIPELINE_ROLLING_DAYS
+        days_back = PIPELINE_ROLLING_DAYS if not full_profile_sync else 2000
 
     if destination == "bigquery":
         dest = dlt.destinations.bigquery(

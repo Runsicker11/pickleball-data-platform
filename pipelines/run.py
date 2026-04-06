@@ -16,6 +16,7 @@ Usage:
     python -m pipelines.run google-trends
     python -m pipelines.run merchant-center
     python -m pipelines.run klaviyo --days 7
+    python -m pipelines.run youtube --days 30
 """
 
 import argparse
@@ -195,6 +196,25 @@ def main():
     kl_parser.add_argument(
         "--dataset", default="raw_klaviyo", help="Target dataset name (default: raw_klaviyo)"
     )
+    kl_parser.add_argument(
+        "--full-sync", action="store_true",
+        help="Pull all profiles since account creation (backfill, sets days=2000)"
+    )
+
+    # ── youtube ─────────────────────────────────────────────────
+    yt_parser = subparsers.add_parser("youtube", help="Run YouTube pipeline")
+    yt_parser.add_argument(
+        "--days", type=int, default=30, help="Days of analytics history to pull (default: 30)"
+    )
+    yt_parser.add_argument(
+        "--destination",
+        choices=["bigquery", "duckdb"],
+        default="bigquery",
+        help="Load destination (default: bigquery)",
+    )
+    yt_parser.add_argument(
+        "--dataset", default="raw_youtube", help="Target dataset name (default: raw_youtube)"
+    )
 
     args = parser.parse_args()
 
@@ -313,6 +333,17 @@ def main():
 
     elif args.pipeline == "klaviyo":
         from .klaviyo.pipeline import run_pipeline
+
+        load_info = run_pipeline(
+            destination=args.destination,
+            dataset_name=args.dataset,
+            days_back=None if args.full_sync else args.days,
+            full_profile_sync=args.full_sync,
+        )
+        print(f"\nPipeline finished. Load info:\n{load_info}")
+
+    elif args.pipeline == "youtube":
+        from .youtube.pipeline import run_pipeline
 
         load_info = run_pipeline(
             destination=args.destination,

@@ -1,5 +1,6 @@
-"""dlt source for Klaviyo — 5 resources: campaigns, campaign_metrics, flows, flow_messages, metrics_timeline."""
+"""dlt source for Klaviyo — 6 resources: campaigns, campaign_metrics, flows, flow_messages, metrics_timeline, profiles."""
 
+import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 
@@ -22,7 +23,7 @@ def klaviyo_source(
     api_key: str = dlt.secrets.value,
     days_back: int = 7,
 ):
-    """dlt source yielding 5 Klaviyo resources."""
+    """dlt source yielding 6 Klaviyo resources."""
     client = KlaviyoClient(api_key=api_key)
 
     end_date = date.today() - timedelta(days=1)
@@ -34,6 +35,7 @@ def klaviyo_source(
     yield _flows_resource(client)
     yield _flow_messages_resource(client)
     yield _metrics_timeline_resource(client, start_date_90d if days_back >= 90 else start_date, end_date)
+    yield _profiles_resource(client, start_date_90d if days_back >= 90 else start_date)
 
 
 def _campaigns_resource(client: KlaviyoClient):
@@ -211,6 +213,55 @@ def _metrics_timeline_resource(client: KlaviyoClient, start_date: date, end_date
                 logger.warning("Could not get metrics_timeline for %s: %s", metric_name, exc)
 
     return metrics_timeline
+
+
+def _profiles_resource(client: KlaviyoClient, updated_since: date):
+    @dlt.resource(
+        name="profiles",
+        write_disposition="merge",
+        primary_key="id",
+    )
+    def profiles():
+        ingested = _now_utc_str()
+        params = {
+            "page[size]": 100,
+            "additional-fields[profile]": "subscriptions",
+            "filter": f"greater-than(updated,{(updated_since - timedelta(days=1)).isoformat()}T00:00:00+00:00)",
+            "sort": "updated",
+        }
+        for item in client.paginate("/profiles/", params=params):
+            attrs = item.get("attributes") or {}
+            subs = attrs.get("subscriptions") or {}
+            email_mkt = (subs.get("email") or {}).get("marketing") or {}
+            sms_mkt = (subs.get("sms") or {}).get("marketing") or {}
+            location = attrs.get("location") or {}
+            # properties is a free-form dict — serialize to JSON string so BQ
+            # can store it; Grapevine survey answers land here as custom keys
+            raw_props = attrs.get("properties") or {}
+            yield {
+                "id": item.get("id"),
+                "email": attrs.get("email"),
+                "phone_number": attrs.get("phone_number"),
+                "first_name": attrs.get("first_name"),
+                "last_name": attrs.get("last_name"),
+                "created": attrs.get("created"),
+                "updated": attrs.get("updated"),
+                # Flattened subscription status
+                "email_consent": email_mkt.get("consent"),
+                "email_subscribed": email_mkt.get("can_receive_email_marketing"),
+                "email_consent_timestamp": email_mkt.get("consent_timestamp"),
+                "sms_consent": sms_mkt.get("consent"),
+                "sms_subscribed": sms_mkt.get("can_receive_sms_marketing"),
+                # Location for geo segmentation
+                "city": location.get("city"),
+                "region": location.get("region"),
+                "country": location.get("country"),
+                # Raw custom properties (includes Grapevine survey answers, signup source, etc.)
+                "properties": json.dumps(raw_props) if raw_props else None,
+                "ingested_at": ingested,
+            }
+
+    return profiles
 
 
 def _get_metric_map(client: KlaviyoClient, target_names: set[str]) -> dict[str, str]:

@@ -31,6 +31,7 @@ PIPELINES = {
     "quickbooks": ("pipelines.quickbooks.pipeline", 90, "raw_quickbooks"),
     "paypal": ("pipelines.paypal.pipeline", 365, "raw_paypal"),
     "klaviyo": ("pipelines.klaviyo.pipeline", 7, "raw_klaviyo"),
+    "youtube": ("pipelines.youtube.pipeline", 30, "raw_youtube"),
 }
 
 

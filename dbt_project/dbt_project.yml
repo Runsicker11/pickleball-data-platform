@@ -43,6 +43,9 @@ models:
       klaviyo:
         +schema: stg_klaviyo
         +materialized: view
+      youtube:
+        +schema: stg_youtube
+        +materialized: view
     intermediate:
       +materialized: view
       amazon_ads:
