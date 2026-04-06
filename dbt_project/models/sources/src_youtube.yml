@@ -39,5 +39,7 @@ sources:
         columns:
           - name: video_id
             tests: [not_null]
-          - name: report_date
+          - name: period_start
+            tests: [not_null]
+          - name: period_end
             tests: [not_null]

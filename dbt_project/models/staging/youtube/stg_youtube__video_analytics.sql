@@ -5,7 +5,8 @@ with source as (
 renamed as (
     select
         video_id,
-        cast(report_date as date) as report_date,
+        cast(period_start as date) as period_start,
+        cast(period_end as date) as period_end,
         views,
         estimated_minutes_watched,
         round(avg_view_duration_seconds / 60.0, 2) as avg_view_duration_minutes,
