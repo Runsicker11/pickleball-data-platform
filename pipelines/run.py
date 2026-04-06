@@ -21,6 +21,55 @@ Usage:
 
 import argparse
 import logging
+import time
+from datetime import datetime, timezone
+
+
+def _extract_row_count(load_info) -> int:
+    """Extract total rows loaded from dlt LoadInfo object."""
+    try:
+        metrics = load_info.metrics[load_info.loads_ids[0]]
+        total = 0
+        for job_metrics in metrics:
+            for table_name, table_metrics in job_metrics.items():
+                if table_name == "started_at":
+                    continue
+                if isinstance(table_metrics, dict) and "items_count" in table_metrics:
+                    total += table_metrics["items_count"]
+        return total
+    except Exception:
+        return 0
+
+
+def _run_and_log(pipeline_name: str, run_fn, **kwargs):
+    """Run a pipeline function, log the result to BigQuery ops.pipeline_runs, and return LoadInfo."""
+    from .health import log_run
+
+    started = datetime.now(timezone.utc)
+    t0 = time.monotonic()
+    try:
+        load_info = run_fn(**kwargs)
+        duration = time.monotonic() - t0
+        log_run(
+            pipeline_name=pipeline_name,
+            status="success",
+            started_at=started,
+            finished_at=datetime.now(timezone.utc),
+            rows_loaded=_extract_row_count(load_info),
+            duration_seconds=duration,
+        )
+        return load_info
+    except Exception as exc:
+        duration = time.monotonic() - t0
+        log_run(
+            pipeline_name=pipeline_name,
+            status="error",
+            started_at=started,
+            finished_at=datetime.now(timezone.utc),
+            duration_seconds=duration,
+            error_message=str(exc)[:500],
+        )
+        raise
 
 
 def main():
@@ -235,7 +284,8 @@ def main():
             "asin": ASIN_REPORTS,
         }
 
-        load_info = run_pipeline(
+        load_info = _run_and_log(
+            "amazon-ads", run_pipeline,
             destination=args.destination,
             dataset_name=args.dataset,
             days_back=args.days,
@@ -246,7 +296,8 @@ def main():
     elif args.pipeline == "amazon-seller":
         from .amazon_seller.pipeline import run_pipeline
 
-        load_info = run_pipeline(
+        load_info = _run_and_log(
+            "amazon-seller", run_pipeline,
             destination=args.destination,
             dataset_name=args.dataset,
             days_back=args.days,
@@ -256,7 +307,8 @@ def main():
     elif args.pipeline == "shopify":
         from .shopify.pipeline import run_pipeline
 
-        load_info = run_pipeline(
+        load_info = _run_and_log(
+            "shopify", run_pipeline,
             destination=args.destination,
             dataset_name=args.dataset,
             days_back=args.days,
@@ -266,7 +318,8 @@ def main():
     elif args.pipeline == "meta-ads":
         from .meta_ads.pipeline import run_pipeline
 
-        load_info = run_pipeline(
+        load_info = _run_and_log(
+            "meta-ads", run_pipeline,
             destination=args.destination,
             dataset_name=args.dataset,
             days_back=args.days,
@@ -276,7 +329,8 @@ def main():
     elif args.pipeline == "google-ads":
         from .google_ads.pipeline import run_pipeline
 
-        load_info = run_pipeline(
+        load_info = _run_and_log(
+            "google-ads", run_pipeline,
             destination=args.destination,
             dataset_name=args.dataset,
             days_back=args.days,
@@ -286,7 +340,8 @@ def main():
     elif args.pipeline == "search-console":
         from .search_console.pipeline import run_pipeline
 
-        load_info = run_pipeline(
+        load_info = _run_and_log(
+            "search-console", run_pipeline,
             destination=args.destination,
             dataset_name=args.dataset,
             days_back=args.days,
@@ -296,7 +351,8 @@ def main():
     elif args.pipeline == "quickbooks":
         from .quickbooks.pipeline import run_pipeline
 
-        load_info = run_pipeline(
+        load_info = _run_and_log(
+            "quickbooks", run_pipeline,
             destination=args.destination,
             dataset_name=args.dataset,
             days_back=args.days,
@@ -306,7 +362,8 @@ def main():
     elif args.pipeline == "paypal":
         from .paypal.pipeline import run_pipeline
 
-        load_info = run_pipeline(
+        load_info = _run_and_log(
+            "paypal", run_pipeline,
             destination=args.destination,
             dataset_name=args.dataset,
             days_back=args.days,
@@ -316,7 +373,8 @@ def main():
     elif args.pipeline == "google-trends":
         from .google_trends.pipeline import run_pipeline
 
-        load_info = run_pipeline(
+        load_info = _run_and_log(
+            "google-trends", run_pipeline,
             destination=args.destination,
             dataset_name=args.dataset,
         )
@@ -325,7 +383,8 @@ def main():
     elif args.pipeline == "merchant-center":
         from .merchant_center.pipeline import run_pipeline
 
-        load_info = run_pipeline(
+        load_info = _run_and_log(
+            "merchant-center", run_pipeline,
             destination=args.destination,
             dataset_name=args.dataset,
         )
@@ -334,7 +393,8 @@ def main():
     elif args.pipeline == "klaviyo":
         from .klaviyo.pipeline import run_pipeline
 
-        load_info = run_pipeline(
+        load_info = _run_and_log(
+            "klaviyo", run_pipeline,
             destination=args.destination,
             dataset_name=args.dataset,
             days_back=None if args.full_sync else args.days,
@@ -345,7 +405,8 @@ def main():
     elif args.pipeline == "youtube":
         from .youtube.pipeline import run_pipeline
 
-        load_info = run_pipeline(
+        load_info = _run_and_log(
+            "youtube", run_pipeline,
             destination=args.destination,
             dataset_name=args.dataset,
             days_back=args.days,
