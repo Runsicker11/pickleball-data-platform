@@ -161,8 +161,19 @@ def amazon_seller_source(
                 f"FBA shipments chunk {chunk_start_str} to "
                 f"{chunk_end_str}: {len(rows)} rows"
             )
+            skipped = 0
             for row in rows:
-                yield _normalize_row(row)
+                normalized = _normalize_row(row)
+                # Skip rows missing primary key columns — can't merge without them
+                if not normalized.get("shipment_id") or not normalized.get("shipment_item_id"):
+                    skipped += 1
+                    continue
+                yield normalized
+            if skipped:
+                logger.warning(
+                    f"FBA shipments chunk {chunk_start_str} to {chunk_end_str}: "
+                    f"skipped {skipped} rows with null shipment_id/shipment_item_id"
+                )
 
             time.sleep(60)
             current_start = current_end
