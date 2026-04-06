@@ -1,4 +1,2 @@
-{{ config(enabled=false) }}
--- DISABLED: upstream stg_search_console__performance is disabled
--- Compatibility view for ai-marketing
+-- Compatibility view for ai-marketing: week-over-week ranking changes
 select * from {{ ref('int_marketing__seo_trends') }}

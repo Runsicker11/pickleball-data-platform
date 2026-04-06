@@ -1,5 +1,3 @@
-{{ config(enabled=false) }}
--- DISABLED: upstream stg_search_console__performance is disabled
 -- Week-over-week ranking changes
 -- Replaces: vw_seo_trends
 

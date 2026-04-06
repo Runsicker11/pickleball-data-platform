@@ -1,5 +1,3 @@
-{{ config(enabled=false) }}
--- DISABLED: upstream stg_search_console__performance is disabled
 -- Pages with high impressions but low CTR
 -- Replaces: vw_seo_content_gaps
 

@@ -1,5 +1,3 @@
-{{ config(enabled=false) }}
--- DISABLED: upstream stg_search_console__performance is disabled
 -- Striking-distance keywords (position 5-20)
 -- Replaces: vw_seo_opportunities
 
