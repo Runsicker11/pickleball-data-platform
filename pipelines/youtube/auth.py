@@ -44,11 +44,22 @@ def run_auth_flow() -> str:
 
 
 def load_client_credentials() -> tuple[str, str]:
-    """Load client_id and client_secret from oauth_client.json."""
-    with open(_OAUTH_CLIENT_JSON) as f:
-        data = json.load(f)
-    installed = data.get("installed", data.get("web", {}))
-    return installed["client_id"], installed["client_secret"]
+    """Load client_id and client_secret from oauth_client.json or env vars."""
+    if _OAUTH_CLIENT_JSON.exists():
+        with open(_OAUTH_CLIENT_JSON) as f:
+            data = json.load(f)
+        installed = data.get("installed", data.get("web", {}))
+        return installed["client_id"], installed["client_secret"]
+
+    # Fallback: read from environment (used in Cloud Run where the JSON isn't present)
+    client_id = os.getenv("YOUTUBE_CLIENT_ID", "")
+    client_secret = os.getenv("YOUTUBE_CLIENT_SECRET", "")
+    if not client_id or not client_secret:
+        raise RuntimeError(
+            "YouTube OAuth credentials not found. Either place oauth_client.json at "
+            f"{_OAUTH_CLIENT_JSON} or set YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET env vars."
+        )
+    return client_id, client_secret
 
 
 if __name__ == "__main__":

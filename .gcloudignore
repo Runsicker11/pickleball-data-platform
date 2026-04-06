@@ -1,0 +1,45 @@
+.gcloudignore
+.git
+.gitignore
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Local dev
+.env
+.env.*
+*.duckdb
+*.duckdb.wal
+.dlt/
+.claude/
+
+# dbt generated
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+dbt_project/.user.yml
+dbt_project/package-lock.yml
+
+# Evidence dashboard (not needed in container)
+dashboard/
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfvars
+
+# Tests / tooling
+tests/
+.pytest_cache/
+.ruff_cache/
+
+# Misc
+nul
+*.csv
