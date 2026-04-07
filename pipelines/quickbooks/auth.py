@@ -3,15 +3,13 @@
 Usage:
     python -m pipelines.quickbooks.auth
 
-Opens a browser for you to authorize, then exchanges the code for
-access + refresh tokens. Paste the refresh token into your .env file.
+Uses the Intuit OAuth2 Playground redirect URI. After authorizing in the
+browser, paste the full redirect URL from your address bar into the terminal.
 """
 
 import base64
-import threading
 import urllib.parse
 import webbrowser
-from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import requests
 
@@ -19,44 +17,8 @@ from ..config import QUICKBOOKS_CLIENT_ID, QUICKBOOKS_CLIENT_SECRET
 
 AUTHORIZATION_URL = "https://appcenter.intuit.com/connect/oauth2"
 TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"
-REDIRECT_URI = "http://localhost:8080/callback"
+REDIRECT_URI = "https://developer.intuit.com/v2/OAuth2Playground/RedirectUrl"
 SCOPES = "com.intuit.quickbooks.accounting"
-
-# Will be set by the callback handler
-_auth_result: dict = {}
-
-
-class _CallbackHandler(BaseHTTPRequestHandler):
-    """Handle the OAuth2 redirect callback."""
-
-    def do_GET(self):  # noqa: N802
-        parsed = urllib.parse.urlparse(self.path)
-        params = urllib.parse.parse_qs(parsed.query)
-
-        if "code" in params:
-            _auth_result["code"] = params["code"][0]
-            _auth_result["realm_id"] = params.get("realmId", [None])[0]
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html")
-            self.end_headers()
-            self.wfile.write(
-                b"<h2>Authorization successful!</h2>"
-                b"<p>You can close this tab and return to the terminal.</p>"
-            )
-        else:
-            error = params.get("error", ["unknown"])[0]
-            _auth_result["error"] = error
-            self.send_response(400)
-            self.send_header("Content-Type", "text/html")
-            self.end_headers()
-            self.wfile.write(f"<h2>Authorization failed: {error}</h2>".encode())
-
-        # Shut down the server after handling the callback
-        threading.Thread(target=self.server.shutdown, daemon=True).start()
-
-    def log_message(self, format, *args):
-        """Suppress default request logging."""
-        pass
 
 
 def _exchange_code(code: str) -> dict:
@@ -89,7 +51,6 @@ def authorize():
         print("ERROR: Set QUICKBOOKS_CLIENT_ID and QUICKBOOKS_CLIENT_SECRET in .env first.")
         return
 
-    # Build authorization URL
     params = urllib.parse.urlencode({
         "client_id": QUICKBOOKS_CLIENT_ID,
         "scope": SCOPES,
@@ -103,31 +64,35 @@ def authorize():
     print(f"\nIf the browser doesn't open, visit:\n{auth_url}\n")
     webbrowser.open(auth_url)
 
-    # Start local server to receive callback
-    server = HTTPServer(("localhost", 8080), _CallbackHandler)
-    print("Waiting for authorization callback on http://localhost:8080/callback ...")
-    server.serve_forever()
+    print("After authorizing, you'll land on the Intuit OAuth Playground page.")
+    print("Copy the FULL URL from your browser's address bar and paste it here.\n")
+    redirect_url = input("Paste the full redirect URL: ").strip()
 
-    if "error" in _auth_result:
-        print(f"\nAuthorization failed: {_auth_result['error']}")
+    parsed = urllib.parse.urlparse(redirect_url)
+    params_out = urllib.parse.parse_qs(parsed.query)
+
+    if "error" in params_out:
+        print(f"\nAuthorization failed: {params_out['error'][0]}")
         return
 
-    if "code" not in _auth_result:
-        print("\nNo authorization code received.")
+    code = params_out.get("code", [None])[0]
+    realm_id = params_out.get("realmId", [None])[0]
+
+    if not code:
+        print("\nNo authorization code found in the URL. Make sure you copied the full URL.")
         return
 
     print("\nExchanging authorization code for tokens...")
-    tokens = _exchange_code(_auth_result["code"])
+    tokens = _exchange_code(code)
 
     print("\n" + "=" * 60)
-    print("SUCCESS! Add this to your .env file:")
+    print("SUCCESS! Add these to your .env file:")
     print("=" * 60)
     print(f"\nQUICKBOOKS_REFRESH_TOKEN={tokens['refresh_token']}")
-    if _auth_result.get("realm_id"):
-        print(f"\n(Realm ID from callback: {_auth_result['realm_id']})")
-    print(f"\nAccess token expires in: {tokens.get('expires_in', '?')} seconds")
-    print(f"Refresh token expires in: {tokens.get('x_refresh_token_expires_in', '?')} seconds")
-    print("\nThe refresh token is valid for ~100 days and auto-renews on each use.")
+    if realm_id:
+        print(f"QUICKBOOKS_REALM_ID={realm_id}")
+    print(f"\nRefresh token valid for: {tokens.get('x_refresh_token_expires_in', '?')} seconds (~100 days)")
+    print("It auto-renews on each pipeline run so it won't expire as long as the pipeline runs daily.")
 
 
 if __name__ == "__main__":
