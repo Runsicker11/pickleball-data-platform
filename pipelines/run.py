@@ -26,17 +26,13 @@ from datetime import datetime, timezone
 
 
 def _extract_row_count(load_info) -> int:
-    """Extract total rows loaded from dlt LoadInfo object."""
+    """Extract total rows loaded from dlt LoadInfo object via normalize step metrics."""
     try:
-        metrics = load_info.metrics[load_info.loads_ids[0]]
-        total = 0
-        for job_metrics in metrics:
-            for table_name, table_metrics in job_metrics.items():
-                if table_name == "started_at":
-                    continue
-                if isinstance(table_metrics, dict) and "items_count" in table_metrics:
-                    total += table_metrics["items_count"]
-        return total
+        row_counts = load_info.pipeline.last_trace.last_normalize_info.row_counts
+        return sum(
+            count for table, count in row_counts.items()
+            if not table.startswith("_dlt_")
+        )
     except Exception:
         return 0
 

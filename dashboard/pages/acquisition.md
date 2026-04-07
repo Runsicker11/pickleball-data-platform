@@ -163,8 +163,6 @@ order by spend desc
     y=roas
     series=channel
     title="Weekly ROAS by Channel (GA4-attributed)"
-    referenceLine={1.8}
-    referenceLineLabel="Floor (1.8x)"
     referenceLine={3.0}
     referenceLineLabel="Target (3.0x)"
 />
