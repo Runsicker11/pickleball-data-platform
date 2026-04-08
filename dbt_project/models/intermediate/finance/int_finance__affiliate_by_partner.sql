@@ -49,15 +49,12 @@ affiliate_deposits as (
       and source_summary = 'Affiliate Revenue'
 ),
 
--- Join to PayPal CSV-export seed to get sender name by transaction ID
--- (The Reporting API omits payer business names for B2B payments; the CSV export has them.)
+-- paypal_txn_names seed removed; sender name lookup falls back to memo/subject tiers below
 with_paypal_sender as (
     select
         d.*,
-        nullif(trim(tn.sender_name), '') as paypal_sender_name
+        cast(null as string) as paypal_sender_name
     from affiliate_deposits d
-    left join {{ ref('paypal_txn_names') }} tn
-        on d.paypal_txn_id = tn.transaction_id
 ),
 
 -- Map sender name → partner brand via the partner mapping seed

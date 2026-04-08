@@ -39,7 +39,7 @@ select
     g.ga4_medium,
     g.ga4_campaign,
     g.google_ads_campaign_id,
-    o.total_price as shopify_revenue,
+    (o.total_price - coalesce(o.total_tax, 0)) as shopify_revenue,
     g.ga4_revenue,
     g.user_pseudo_id
 from ga4_purchases g
