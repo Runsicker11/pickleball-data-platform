@@ -57,14 +57,12 @@ with_paypal_sender as (
     from affiliate_deposits d
 ),
 
--- Map sender name → partner brand via the partner mapping seed
+-- paypal_partner_mapping seed removed; brand lookup falls back to memo/subject tiers below
 with_paypal_brand as (
     select
         d.*,
-        pm.partner_brand as paypal_partner_brand
+        cast(null as string) as paypal_partner_brand
     from with_paypal_sender d
-    left join {{ ref('paypal_partner_mapping') }} pm
-        on lower(trim(d.paypal_sender_name)) = lower(trim(pm.sender_name))
 ),
 
 -- Also join the Reporting API for transaction_subject (fallback match text when
