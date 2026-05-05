@@ -117,3 +117,24 @@ models:
     columns:
       - name: vendor_name
         tests: [not_null, unique]
+
+  - name: mart_google_ads_search_term_ngrams
+    description: >
+      Weekly n-gram analysis (1- and 2-word tokens) of Google Ads search terms.
+      Each row = one n-gram × campaign × ISO week. total_spend reflects spend from
+      all search terms containing that n-gram — useful for spotting wasteful token
+      patterns spread too thin to trigger per-term alerts. signal column classifies
+      each n-gram as wasteful / watch / top_performer / good / neutral.
+      Rolling 8-week history; singletons with < $5 spend excluded.
+    columns:
+      - name: week_start
+        tests: [not_null]
+        description: "Monday of the ISO week (date_trunc WEEK(MONDAY))"
+      - name: ngram
+        tests: [not_null]
+      - name: ngram_length
+        description: "1 = unigram, 2 = bigram"
+      - name: campaign_name
+        tests: [not_null]
+      - name: signal
+        description: "wasteful | watch | top_performer | good | neutral"
