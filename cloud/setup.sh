@@ -252,6 +252,21 @@ gcloud scheduler jobs create http daily-analysis-trigger \
     && echo "     daily-analysis-trigger: created" \
     || echo "     daily-analysis-trigger: already exists"
 
+# Google Ads health check: 8:00 AM UTC every Monday (before daily analysis at 9am)
+# The daily-analysis job CMD runs --gads-health on Mondays (day 1) — this trigger
+# fires it early so the health report is in Slack before the work day starts.
+gcloud scheduler jobs create http trigger-gads-health \
+    --schedule="0 8 * * 1" \
+    --time-zone="UTC" \
+    --uri="${ANALYSIS_URI}" \
+    --http-method=POST \
+    --oauth-service-account-email="${SA_EMAIL}" \
+    --location="${REGION}" \
+    --project="${PROJECT_ID}" \
+    --quiet 2>/dev/null \
+    && echo "     trigger-gads-health: created" \
+    || echo "     trigger-gads-health: already exists"
+
 # ── 9. Remove old monolithic job (if it exists) ────────────────────────────
 echo ""
 echo "Cleaning up old monolithic job..."
