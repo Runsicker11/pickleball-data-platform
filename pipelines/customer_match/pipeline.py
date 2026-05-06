@@ -67,7 +67,7 @@ def _get_or_create_user_list(client: GoogleAdsClient, customer_id: str) -> str:
     ul.name = _USER_LIST_NAME
     ul.description = "All Shopify customers — refreshed monthly via Customer Match export"
     ul.membership_status = client.enums.UserListMembershipStatusEnum.OPEN
-    ul.membership_life_span = 10000  # max, effectively no expiry
+    ul.membership_life_span = 540  # 18 months (API v23 max for CRM lists)
     ul.crm_based_user_list.upload_key_type = (
         client.enums.CustomerMatchUploadKeyTypeEnum.CONTACT_INFO
     )
