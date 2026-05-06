@@ -17,6 +17,7 @@ Usage:
     python -m pipelines.run merchant-center
     python -m pipelines.run klaviyo --days 7
     python -m pipelines.run youtube --days 30
+    python -m pipelines.run customer-match
 """
 
 import argparse
@@ -246,6 +247,12 @@ def main():
         help="Pull all profiles since account creation (backfill, sets days=2000)"
     )
 
+    # ── customer-match ───────────────────────────────────────────
+    subparsers.add_parser(
+        "customer-match",
+        help="Export Shopify customers to Google Ads Customer Match user list",
+    )
+
     # ── youtube ─────────────────────────────────────────────────
     yt_parser = subparsers.add_parser("youtube", help="Run YouTube pipeline")
     yt_parser.add_argument(
@@ -408,6 +415,36 @@ def main():
             days_back=args.days,
         )
         print(f"\nPipeline finished. Load info:\n{load_info}")
+
+    elif args.pipeline == "customer-match":
+        from .customer_match.pipeline import run_pipeline
+        from .health import log_run
+
+        started = datetime.now(timezone.utc)
+        t0 = time.monotonic()
+        try:
+            count = run_pipeline()
+            duration = time.monotonic() - t0
+            log_run(
+                pipeline_name="customer-match",
+                status="success",
+                started_at=started,
+                finished_at=datetime.now(timezone.utc),
+                rows_loaded=count,
+                duration_seconds=duration,
+            )
+            print(f"\nCustomer Match upload complete. {count} users uploaded.")
+        except Exception as exc:
+            duration = time.monotonic() - t0
+            log_run(
+                pipeline_name="customer-match",
+                status="error",
+                started_at=started,
+                finished_at=datetime.now(timezone.utc),
+                duration_seconds=duration,
+                error_message=str(exc)[:500],
+            )
+            raise
 
 
 if __name__ == "__main__":

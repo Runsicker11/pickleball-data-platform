@@ -171,6 +171,7 @@ _upsert_job "pipeline-amazon-seller"    3600  "python -m pipelines.run amazon-se
 _upsert_job "pipeline-quickbooks"       1800  "python -m pipelines.run quickbooks --days 90"
 _upsert_job "pipeline-paypal"           1800  "python -m pipelines.run paypal --days 365"
 _upsert_job "pipeline-klaviyo"          1800  "python -m pipelines.run klaviyo --days 7"
+_upsert_job "pipeline-customer-match"   1800  "python -m pipelines.run customer-match"
 
 # dbt job (runs after all pipelines complete)
 # dbt test and source freshness are non-fatal: failures are logged but don't fail the job
@@ -237,6 +238,8 @@ _upsert_scheduler "trigger-quickbooks"       "0 6 * * *"    "pipeline-quickbooks
 _upsert_scheduler "trigger-paypal"           "0 6 * * *"    "pipeline-paypal"
 _upsert_scheduler "trigger-klaviyo"          "0 6 * * *"    "pipeline-klaviyo"
 _upsert_scheduler "trigger-dbt"              "30 8 * * *"   "pipeline-dbt"
+# First Monday of month: days 1-7 covers every possible first Monday
+_upsert_scheduler "trigger-customer-match"   "0 6 1-7 * 1"  "pipeline-customer-match"
 
 # Analysis job: 9:00 AM UTC (after dbt finishes)
 ANALYSIS_URI="https://${REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/daily-analysis:run"
@@ -289,10 +292,11 @@ echo ""
 echo "=== Setup complete! ==="
 echo ""
 echo "Schedule (UTC):"
-echo "  6:00 AM  →  shopify, meta-ads, google-ads, search-console,"
-echo "              amazon-ads, amazon-seller, quickbooks, paypal  (parallel)"
-echo "  8:30 AM  →  dbt  (after all pipelines have finished)"
-echo "  9:00 AM  →  daily-analysis"
+echo "  6:00 AM daily      →  shopify, meta-ads, google-ads, search-console,"
+echo "                        amazon-ads, amazon-seller, quickbooks, paypal  (parallel)"
+echo "  8:30 AM daily      →  dbt  (after all pipelines have finished)"
+echo "  9:00 AM daily      →  daily-analysis"
+echo "  6:00 AM 1st Monday →  customer-match  (monthly Shopify → Google Ads)"
 echo ""
 echo "Test a pipeline:"
 echo "  gcloud run jobs execute pipeline-google-ads --region ${REGION}"
@@ -315,3 +319,4 @@ echo "  amazon-seller:   3600s  (1 hour)"
 echo "  quickbooks:      1800s  (30 min)"
 echo "  paypal:          1800s  (30 min)"
 echo "  dbt:             1800s  (30 min)"
+echo "  customer-match:  1800s  (30 min)"
