@@ -8,6 +8,7 @@ renamed as (
         metric_id,
         metric_name,
         cast(value as float64) as value,
+        cast(sum_value as float64) as sum_value,
         cast(ingested_at as timestamp) as ingested_at
     from source
 )

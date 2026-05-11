@@ -14,8 +14,16 @@ def _now_utc_str() -> str:
 
 logger = logging.getLogger(__name__)
 
-# Klaviyo metric names to pull for metrics_timeline
-_TARGET_METRICS = {"Opened Email", "Clicked Email", "Placed Order"}
+# Klaviyo metrics to pull for metrics_timeline.
+# Each tuple is (metric_name, preferred_integration). Klaviyo accounts often have
+# duplicate metric names across integrations (e.g. both Shopify and WooCommerce
+# expose "Placed Order"); preferred_integration disambiguates. None means the
+# metric is Klaviyo-native and only appears once.
+_TARGET_METRICS: tuple[tuple[str, str | None], ...] = (
+    ("Opened Email", None),
+    ("Clicked Email", None),
+    ("Placed Order", "Shopify"),
+)
 
 
 @dlt.source(name="klaviyo")
@@ -28,14 +36,19 @@ def klaviyo_source(
 
     end_date = date.today() - timedelta(days=1)
     start_date = end_date - timedelta(days=days_back - 1)
-    start_date_90d = date.today() - timedelta(days=90)
+
+    # Resolve metric IDs once and share across resources that need them.
+    # campaign_metrics requires the Shopify "Placed Order" ID as the
+    # conversion_metric_id for campaign-values-reports.
+    metric_map = _get_metric_map(client, _TARGET_METRICS)
+    placed_order_id = metric_map.get("Placed Order")
 
     yield _campaigns_resource(client)
-    yield _campaign_metrics_resource(client)
+    yield _campaign_metrics_resource(client, placed_order_id)
     yield _flows_resource(client)
     yield _flow_messages_resource(client)
-    yield _metrics_timeline_resource(client, start_date_90d if days_back >= 90 else start_date, end_date)
-    yield _profiles_resource(client, start_date_90d if days_back >= 90 else start_date)
+    yield _metrics_timeline_resource(client, metric_map, start_date, end_date)
+    yield _profiles_resource(client, start_date)
 
 
 def _campaigns_resource(client: KlaviyoClient):
@@ -60,7 +73,7 @@ def _campaigns_resource(client: KlaviyoClient):
     return campaigns
 
 
-def _campaign_metrics_resource(client: KlaviyoClient):
+def _campaign_metrics_resource(client: KlaviyoClient, placed_order_metric_id: str | None):
     @dlt.resource(
         name="campaign_metrics",
         write_disposition="merge",
@@ -70,6 +83,12 @@ def _campaign_metrics_resource(client: KlaviyoClient):
     def campaign_metrics():
         ingested = _now_utc_str()
 
+        if not placed_order_metric_id:
+            logger.warning(
+                "Skipping campaign_metrics: no Shopify Placed Order metric ID discovered"
+            )
+            return
+
         # campaign-values-reports returns all per-campaign stats in one call.
         # Use a wide timeframe to cover the full account history.
         payload = {
@@ -77,7 +96,7 @@ def _campaign_metrics_resource(client: KlaviyoClient):
                 "type": "campaign-values-report",
                 "attributes": {
                     "timeframe": {"key": "last_12_months"},
-                    "conversion_metric_id": "VnPFBW",  # Placed Order
+                    "conversion_metric_id": placed_order_metric_id,
                     "statistics": [
                         "opens", "clicks", "unsubscribes",
                         "delivered", "recipients", "conversion_value", "conversions",
@@ -168,7 +187,12 @@ def _flow_messages_resource(client: KlaviyoClient):
     return flow_messages
 
 
-def _metrics_timeline_resource(client: KlaviyoClient, start_date: date, end_date: date):
+def _metrics_timeline_resource(
+    client: KlaviyoClient,
+    metric_map: dict[str, str],
+    start_date: date,
+    end_date: date,
+):
     @dlt.resource(
         name="metrics_timeline",
         write_disposition="merge",
@@ -177,7 +201,6 @@ def _metrics_timeline_resource(client: KlaviyoClient, start_date: date, end_date
     )
     def metrics_timeline():
         ingested = _now_utc_str()
-        metric_map = _get_metric_map(client, _TARGET_METRICS)
 
         for metric_name, metric_id in metric_map.items():
             try:
@@ -199,7 +222,9 @@ def _metrics_timeline_resource(client: KlaviyoClient, start_date: date, end_date
                 attrs = (result.get("data") or {}).get("attributes") or {}
                 dates = attrs.get("dates") or []
                 rows = attrs.get("data") or []
-                counts = (rows[0].get("measurements", {}).get("count", []) if rows else [])
+                measurements = (rows[0].get("measurements") or {}) if rows else {}
+                counts = measurements.get("count") or []
+                sums = measurements.get("sum_value") or []
 
                 for i, day_str in enumerate(dates):
                     yield {
@@ -207,6 +232,7 @@ def _metrics_timeline_resource(client: KlaviyoClient, start_date: date, end_date
                         "metric_id": metric_id,
                         "metric_name": metric_name,
                         "value": counts[i] if i < len(counts) else None,
+                        "sum_value": sums[i] if i < len(sums) else None,
                         "ingested_at": ingested,
                     }
             except Exception as exc:
@@ -264,16 +290,44 @@ def _profiles_resource(client: KlaviyoClient, updated_since: date):
     return profiles
 
 
-def _get_metric_map(client: KlaviyoClient, target_names: set[str]) -> dict[str, str]:
-    """Return {metric_name: metric_id} for the requested metric names."""
-    metric_map: dict[str, str] = {}
+def _get_metric_map(
+    client: KlaviyoClient,
+    targets: tuple[tuple[str, str | None], ...],
+) -> dict[str, str]:
+    """Return {metric_name: metric_id} for the requested (name, integration) targets.
+
+    When integration is None, the first metric matching the name wins. When set,
+    we require integration.name to match — protects against duplicate metric names
+    across integrations (e.g. Shopify vs WooCommerce "Placed Order").
+    """
+    by_name_integration: dict[tuple[str, str | None], str] = {}
     try:
-        for item in client.paginate("/metrics/", params={"fields[metric]": "name"}):
-            name = (item.get("attributes") or {}).get("name", "")
-            if name in target_names:
-                metric_map[name] = item["id"]
-            if len(metric_map) == len(target_names):
-                break
+        for item in client.paginate(
+            "/metrics/", params={"fields[metric]": "name,integration"}
+        ):
+            attrs = item.get("attributes") or {}
+            name = attrs.get("name", "")
+            integration = (attrs.get("integration") or {}).get("name")
+            for target_name, target_integration in targets:
+                if name != target_name:
+                    continue
+                if target_integration is not None and integration != target_integration:
+                    continue
+                key = (target_name, target_integration)
+                # First match wins (API returns one row per metric)
+                by_name_integration.setdefault(key, item["id"])
     except Exception as exc:
         logger.warning("Could not fetch Klaviyo metrics list: %s", exc)
+
+    metric_map: dict[str, str] = {}
+    for target_name, target_integration in targets:
+        mid = by_name_integration.get((target_name, target_integration))
+        if mid is None:
+            logger.warning(
+                "Klaviyo metric not found: name=%s integration=%s",
+                target_name,
+                target_integration,
+            )
+            continue
+        metric_map[target_name] = mid
     return metric_map
