@@ -1,6 +1,7 @@
 """QuickBooks dlt source — invoices, payments, purchases, bills, deposits, customers, accounts, vendors, items."""
 
 import logging
+from collections.abc import Callable
 from datetime import date, datetime, timedelta, timezone
 
 import dlt
@@ -21,6 +22,7 @@ def quickbooks_source(
     refresh_token: str = dlt.secrets.value,
     realm_id: str = dlt.secrets.value,
     days_back: int = 90,
+    on_refresh_token_change: Callable[[str], None] | None = None,
 ):
     """dlt source yielding QuickBooks Online resources."""
     client = QuickBooksClient(
@@ -28,6 +30,7 @@ def quickbooks_source(
         client_secret=client_secret,
         refresh_token=refresh_token,
         realm_id=realm_id,
+        on_refresh_token_change=on_refresh_token_change,
     )
     since_date = date.today() - timedelta(days=days_back)
 

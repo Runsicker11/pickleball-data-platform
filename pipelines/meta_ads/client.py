@@ -1,6 +1,7 @@
 """Meta Graph API client with token validation and cursor pagination."""
 
 import logging
+import urllib.parse
 from datetime import datetime, timezone
 
 import requests
@@ -14,6 +15,33 @@ _FIELDS_FULL_CREATIVES = (
 _FIELDS_BASIC_CREATIVES = (
     "id,name,title,body,call_to_action_type,thumbnail_url,image_url,object_type"
 )
+
+
+def _strip_object_story_spec(url: str) -> str:
+    """Remove ``object_story_spec`` from the ``fields`` query param of a Meta paginated URL."""
+    parsed = urllib.parse.urlparse(url)
+    qs = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+    fields = qs.get("fields", [""])[0]
+    if "object_story_spec" in fields:
+        qs["fields"] = [
+            ",".join(f for f in fields.split(",") if f != "object_story_spec")
+        ]
+    return urllib.parse.urlunparse(parsed._replace(query=urllib.parse.urlencode(qs, doseq=True)))
+
+
+def _set_limit(url: str, limit: int) -> str:
+    """Replace the ``limit`` query param in a Meta paginated URL."""
+    parsed = urllib.parse.urlparse(url)
+    qs = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+    qs["limit"] = [str(limit)]
+    return urllib.parse.urlunparse(parsed._replace(query=urllib.parse.urlencode(qs, doseq=True)))
+
+
+def _extract_cursor(url: str) -> str:
+    """Best-effort extraction of the ``after`` cursor for log messages."""
+    parsed = urllib.parse.urlparse(url)
+    qs = urllib.parse.parse_qs(parsed.query)
+    return qs.get("after", ["<none>"])[0]
 
 
 class MetaAdsClient:
@@ -78,20 +106,68 @@ class MetaAdsClient:
         return all_data
 
     def paginate_creatives(self, url: str, params: dict) -> list[dict]:
-        """Paginate creatives with fallback for 500 errors on object_story_spec."""
+        """Paginate creatives, tolerating 500s caused by individual bad creatives.
+
+        Meta sometimes returns 500 for a page if it contains a creative whose
+        ``object_story_spec`` is malformed — and occasionally for any field on
+        a specific bad creative. Fallback chain on 500:
+
+        1. Strip ``object_story_spec`` from fields and retry (works on both the
+           first page and on cursor URLs where fields are baked in).
+        2. Shrink ``limit`` (50 → 10 → 1) to isolate the bad creative; the page
+           that contains it is dropped, the others are kept.
+        3. If even ``limit=1`` 500s, the cursor itself is poisoned: log and
+           return what we have rather than failing the whole pipeline.
+        """
         all_data = []
         while url:
             resp = self._session.get(url, params=params, timeout=60)
-            if resp.status_code == 500 and params and "object_story_spec" in params.get("fields", ""):
-                logger.warning("500 error with object_story_spec, retrying without it")
-                params["fields"] = _FIELDS_BASIC_CREATIVES
-                resp = self._session.get(url, params=params, timeout=60)
+            if resp.status_code == 500:
+                resp = self._recover_from_500(url, params)
+                if resp is None:
+                    logger.error(
+                        "Unrecoverable 500 from Meta creatives at cursor %s; "
+                        "returning %d creatives gathered so far",
+                        _extract_cursor(url), len(all_data),
+                    )
+                    return all_data
             resp.raise_for_status()
             data = resp.json()
             all_data.extend(data.get("data", []))
             url = data.get("paging", {}).get("next")
             params = None
         return all_data
+
+    def _recover_from_500(self, url: str, params: dict | None):
+        """Attempt to recover a 500 on the creatives endpoint.
+
+        Returns a successful response or ``None`` if all attempts fail.
+        """
+        # 1. Strip object_story_spec.
+        if params and "object_story_spec" in params.get("fields", ""):
+            logger.warning("500 on creatives page, retrying without object_story_spec")
+            params["fields"] = _FIELDS_BASIC_CREATIVES
+            resp = self._session.get(url, params=params, timeout=60)
+            if resp.ok:
+                return resp
+            url = resp.url  # subsequent retries use baked-in URL
+            params = None
+        elif "object_story_spec" in url:
+            logger.warning("500 on paginated creatives, retrying without object_story_spec")
+            url = _strip_object_story_spec(url)
+            resp = self._session.get(url, timeout=60)
+            if resp.ok:
+                return resp
+
+        # 2. Shrink limit to skip past the bad creative.
+        for new_limit in (10, 1):
+            shrunk = _set_limit(url, new_limit)
+            logger.warning("Retrying creatives cursor with limit=%d", new_limit)
+            resp = self._session.get(shrunk, timeout=60)
+            if resp.ok:
+                return resp
+
+        return None
 
     def get_campaigns(self) -> list[dict]:
         url = self._api_url(f"act_{self.account_id}/campaigns")

@@ -2,6 +2,7 @@
 
 import base64
 import logging
+from collections.abc import Callable
 from datetime import datetime, timedelta
 
 import requests
@@ -31,11 +32,13 @@ class QuickBooksClient:
         client_secret: str,
         refresh_token: str,
         realm_id: str,
+        on_refresh_token_change: Callable[[str], None] | None = None,
     ):
         self.client_id = client_id
         self.client_secret = client_secret
         self.refresh_token = refresh_token
         self.realm_id = realm_id
+        self._on_refresh_token_change = on_refresh_token_change
         self._access_token: str | None = None
         self._token_expires_at: datetime | None = None
         self._session = requests.Session()
@@ -75,10 +78,19 @@ class QuickBooksClient:
             seconds=token_data.get("expires_in", 3600) - 300  # refresh 5 min early
         )
 
-        # QBO returns a new refresh token on each refresh — update it
+        # QBO returns a new refresh token on each refresh — update it and
+        # notify the persister so the next pipeline run uses the rotated value.
         new_refresh = token_data.get("refresh_token")
-        if new_refresh:
+        if new_refresh and new_refresh != self.refresh_token:
             self.refresh_token = new_refresh
+            if self._on_refresh_token_change is not None:
+                try:
+                    self._on_refresh_token_change(new_refresh)
+                except Exception:
+                    logger.exception(
+                        "Failed to persist rotated QuickBooks refresh token; "
+                        "continuing with in-memory value"
+                    )
 
         logger.info("QuickBooks access token refreshed")
         return self._access_token
