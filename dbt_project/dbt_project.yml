@@ -84,3 +84,11 @@ seeds:
         month: date
         revenue: float64
         transaction_count: int64
+    shop_product_cogs:
+      +schema: product
+      +column_types:
+        shop_sku: string
+        title: string
+        cogs: float64
+        confidence: string
+        notes: string

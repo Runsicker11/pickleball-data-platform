@@ -43,11 +43,11 @@ def meta_ads_source(
     end_date = date.today() - timedelta(days=1)  # yesterday (today incomplete)
     start_date = end_date - timedelta(days=days_back - 1)
 
+    yield _daily_insights_resource(client, start_date, end_date)
     yield _campaigns_resource(client)
     yield _adsets_resource(client)
     yield _ads_resource(client)
     yield _creatives_resource(client)
-    yield _daily_insights_resource(client, start_date, end_date)
 
 
 def _campaigns_resource(client: MetaAdsClient):

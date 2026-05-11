@@ -1,5 +1,12 @@
 -- SKU-level profitability with COGS matching
 -- Replaces: vw_product_profitability
+--
+-- COGS resolution order:
+--   1. is_partnership (Tuning Clamps)             → 0
+--   2. is_gift_card                               → net_revenue (forces contribution to 0)
+--   3. shop_product_cogs seed (D2C-specific SKUs) → seed cogs * units
+--   4. amazon_product_map                         → map cogs * units
+--   5. flat fallback                              → net_revenue * 0.40
 
 with line_items_detail as (
     select
@@ -8,6 +15,7 @@ with line_items_detail as (
         li.order_id,
         date(o.created_at) as order_date,
         li.title = 'Tuning Clamps' as is_partnership,
+        lower(li.title) like '%gift card%' as is_gift_card,
         li.quantity,
         cast(li.price as float64) * li.quantity as gross_revenue,
         li.total_discount,
@@ -41,6 +49,7 @@ line_items as (
         title,
         order_date,
         max(is_partnership) as is_partnership,
+        max(is_gift_card) as is_gift_card,
         sum(quantity) as units_sold,
         sum(gross_revenue) as gross_revenue,
         sum(total_discount) as total_discounts,
@@ -50,60 +59,67 @@ line_items as (
     group by sku, title, order_date
 ),
 
-cogs_lookup as (
+shop_cogs_lookup as (
+    select
+        lower(trim(shop_sku)) as sku_key,
+        avg(cogs) as unit_cost
+    from {{ ref('shop_product_cogs') }}
+    group by sku_key
+),
+
+amazon_cogs_lookup as (
     select
         lower(trim(sku)) as sku_key,
         avg(cogs) as unit_cost
     from {{ source('product', 'amazon_product_map') }}
     where sku is not null and cogs is not null
     group by sku_key
+),
+
+with_cogs as (
+    select
+        li.*,
+        coalesce(shop.unit_cost, amz.unit_cost) as resolved_unit_cost,
+        case
+            when shop.unit_cost is not null then 'shop_seed'
+            when amz.unit_cost is not null then 'amazon_map'
+            when li.is_partnership then 'partnership'
+            when li.is_gift_card then 'gift_card'
+            else 'fallback_40pct'
+        end as cogs_source
+    from line_items li
+    left join shop_cogs_lookup shop on lower(trim(li.sku)) = shop.sku_key
+    left join amazon_cogs_lookup amz on lower(trim(li.sku)) = amz.sku_key
+),
+
+with_resolved_cogs as (
+    select
+        *,
+        case
+            when is_partnership then 0
+            when is_gift_card then net_revenue
+            when resolved_unit_cost is not null then resolved_unit_cost * units_sold
+            else net_revenue * 0.40
+        end as total_cogs
+    from with_cogs
 )
 
 select
-    li.sku,
-    li.title,
-    li.order_date,
-    li.units_sold,
-    li.gross_revenue,
-    li.total_discounts,
-    li.net_revenue,
-    li.is_partnership,
-    case
-        when li.is_partnership then 0
-        when c.unit_cost is not null then c.unit_cost * li.units_sold
-        else li.net_revenue * 0.40
-    end as total_cogs,
-    li.net_revenue - case
-        when li.is_partnership then 0
-        when c.unit_cost is not null then c.unit_cost * li.units_sold
-        else li.net_revenue * 0.40
-    end as gross_profit,
-    safe_divide(
-        li.net_revenue - case
-            when li.is_partnership then 0
-            when c.unit_cost is not null then c.unit_cost * li.units_sold
-            else li.net_revenue * 0.40
-        end,
-        li.net_revenue
-    ) as gross_margin,
-    case
-        when li.is_partnership then true
-        when c.unit_cost is not null then true
-        else false
-    end as has_actual_cogs,
-    li.estimated_shipping_cost,
-    li.net_revenue - case
-        when li.is_partnership then 0
-        when c.unit_cost is not null then c.unit_cost * li.units_sold
-        else li.net_revenue * 0.40
-    end - li.estimated_shipping_cost as contribution_profit,
-    safe_divide(
-        li.net_revenue - case
-            when li.is_partnership then 0
-            when c.unit_cost is not null then c.unit_cost * li.units_sold
-            else li.net_revenue * 0.40
-        end - li.estimated_shipping_cost,
-        li.net_revenue
-    ) as contribution_margin
-from line_items li
-left join cogs_lookup c on lower(trim(li.sku)) = c.sku_key
+    sku,
+    title,
+    order_date,
+    units_sold,
+    gross_revenue,
+    total_discounts,
+    net_revenue,
+    is_partnership,
+    is_gift_card,
+    cogs_source,
+    total_cogs,
+    net_revenue - total_cogs as gross_profit,
+    safe_divide(net_revenue - total_cogs, net_revenue) as gross_margin,
+    cogs_source in ('shop_seed', 'amazon_map', 'partnership', 'gift_card') as has_actual_cogs,
+    estimated_shipping_cost,
+    net_revenue - total_cogs - estimated_shipping_cost as contribution_profit,
+    safe_divide(net_revenue - total_cogs - estimated_shipping_cost, net_revenue) as contribution_margin
+from with_resolved_cogs

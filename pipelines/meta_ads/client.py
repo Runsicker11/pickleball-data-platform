@@ -78,19 +78,37 @@ class MetaAdsClient:
         return all_data
 
     def paginate_creatives(self, url: str, params: dict) -> list[dict]:
-        """Paginate creatives with fallback for 500 errors on object_story_spec."""
+        """Paginate creatives with fallback for 500 errors on object_story_spec.
+
+        Meta intermittently 500s on specific creative pages. Rather than failing the
+        whole pipeline (which blocks daily_insights), return partial results and warn.
+        """
         all_data = []
         while url:
-            resp = self._session.get(url, params=params, timeout=60)
-            if resp.status_code == 500 and params and "object_story_spec" in params.get("fields", ""):
-                logger.warning("500 error with object_story_spec, retrying without it")
-                params["fields"] = _FIELDS_BASIC_CREATIVES
+            try:
                 resp = self._session.get(url, params=params, timeout=60)
-            resp.raise_for_status()
-            data = resp.json()
-            all_data.extend(data.get("data", []))
-            url = data.get("paging", {}).get("next")
-            params = None
+                if resp.status_code == 500 and params and "object_story_spec" in params.get("fields", ""):
+                    logger.warning("500 error with object_story_spec, retrying without it")
+                    params["fields"] = _FIELDS_BASIC_CREATIVES
+                    resp = self._session.get(url, params=params, timeout=60)
+                if resp.status_code >= 500:
+                    logger.warning(
+                        "Meta returned %s during creatives pagination after %d records; "
+                        "stopping and returning partial data",
+                        resp.status_code, len(all_data),
+                    )
+                    break
+                resp.raise_for_status()
+                data = resp.json()
+                all_data.extend(data.get("data", []))
+                url = data.get("paging", {}).get("next")
+                params = None
+            except requests.RequestException as exc:
+                logger.warning(
+                    "Creatives pagination failed after %d records: %s",
+                    len(all_data), exc,
+                )
+                break
         return all_data
 
     def get_campaigns(self) -> list[dict]:

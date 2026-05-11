@@ -1,0 +1,27 @@
+shop_sku,title,cogs,confidence,notes
+twt-1gin,Tungsten Weighted Tape 1g/in,12.75,high,Same product as Amazon L2-GQ7U-2PBL
+twt-1/2gin,Tungsten Weighted Tape 1/2g/in,7.25,high,Same product as Amazon NO-7EJK-CWEY
+twt-10str-2g,Tungsten Tape 3g Strips 10pk,8.00,high,Same product as Amazon twt-10str
+ptt-05g-1,Paddle Tuning Tape 1/2g/in,1.00,medium,1-pack; Amazon ptt-05g is 0.85
+ptt-05g-2,Paddle Tuning Tape 1/2g/in,1.00,medium,Same product as ptt-05g-1; no 2-pack exists
+black-narrow-egt,Black Edge Guard Tape Narrow,1.00,high,Per Riley; Amazon equivalent 1.15
+white-narrow-egt,White Edge Guard Tape Narrow,1.00,high,Per Riley
+pbwill-blue-standard-egt,Blue PB-Will Edge Guard Tape Standard,1.00,high,Per Riley
+pbwill-blue-narrow-egt,Blue PB-Will Edge Guard Tape Narrow,1.00,high,Per Riley
+pbwill-pink-standard-egt,Pink PB-Will Edge Guard Tape Standard,1.00,high,Per Riley
+pbwill-pink-narrow-egt,Pink PB-Will Edge Guard Tape Narrow,1.00,high,Per Riley
+neon-red-narrow-egt,Neon Red Edge Guard Tape Narrow,1.00,high,Per Riley
+pink-pwill-narrow-egt-8,INVALID - SKU does not exist,1.00,low,Riley confirmed no such product; placeholder COGS
+cap-coin-3-set,Cap Coins 3-Pack,3.00,medium,Per Riley
+NO_SKU_Cap_Coins_3_Pack,Cap Coins 3-Pack,3.00,medium,Per Riley; same as cap-coin-3-set
+NO_SKU_Tungsten_Weighted_Tape,Tungsten Weighted Tape 1.5g/in,22.00,medium,Riley identified as 1.5g variant; Amazon GI-KNZ7-8FJG
+NO_SKU_Weight_Optimizer,Weight Optimizer Bundle,15.00,medium,Bundle - Riley will refine later
+weight-opt-bundle,Weight Optimizer Bundle,15.00,medium,Same as NO_SKU_Weight_Optimizer
+NO_SKU_Paddle_Tuner_Bundle,Paddle Tuner Bundle,3.00,medium,Bundle - Riley will refine later
+NO_SKU_Mystery_Gift,Mystery Gift,0.00,high,Free promo per Riley
+NO_SKU_Weighted_Tape_Sampler,Weighted Tape Sampler,50.00,high,Discontinued - cost too much
+NO_SKU_Pickleball_Effect_Gift_Card,Pickleball Effect Gift Card,0.00,high,Handled via special case in model - contribution forced to 0
+NO_SKU_Grip_Pack,Grip Pack,6.00,medium,Per Riley
+NO_SKU_Edge_Guard_Tape_Custom_2_Pack,Edge Guard Tape Custom 2-Pack,2.30,high,Per Riley
+NO_SKU_Hybrid_Setup_(Heavyweight),Hybrid Setup Heavyweight,15.00,low,ESTIMATE - 1 unit/yr - revisit when revenue grows
+NO_SKU_Beginner_Set,Beginner Set,15.00,low,ESTIMATE - 1 unit/yr - revisit when revenue grows
