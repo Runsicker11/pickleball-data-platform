@@ -14,7 +14,8 @@ neon-red-narrow-egt,Neon Red Edge Guard Tape Narrow,1.00,high,Per Riley
 pink-pwill-narrow-egt-8,INVALID - SKU does not exist,1.00,low,Riley confirmed no such product; placeholder COGS
 cap-coin-3-set,Cap Coins 3-Pack,3.00,medium,Per Riley
 NO_SKU_Cap_Coins_3_Pack,Cap Coins 3-Pack,3.00,medium,Per Riley; same as cap-coin-3-set
-NO_SKU_Tungsten_Weighted_Tape,Tungsten Weighted Tape 1.5g/in,22.00,medium,Riley identified as 1.5g variant; Amazon GI-KNZ7-8FJG
+NO_SKU_Tungsten_Weighted_Tape,Tungsten Weighted Tape 1.5g/in,20.00,high,Confirmed 1.5g/in variant per Riley; Shopify variant 46719588466912 needs SKU set to twt-15gin
+twt-15gin,Tungsten Weighted Tape 1.5g/in,20.00,high,Pre-staged for when Shopify variant 46719588466912 gets its SKU set
 NO_SKU_Weight_Optimizer,Weight Optimizer Bundle,15.00,medium,Bundle - Riley will refine later
 weight-opt-bundle,Weight Optimizer Bundle,15.00,medium,Same as NO_SKU_Weight_Optimizer
 NO_SKU_Paddle_Tuner_Bundle,Paddle Tuner Bundle,3.00,medium,Bundle - Riley will refine later
