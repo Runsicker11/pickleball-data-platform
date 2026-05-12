@@ -41,3 +41,7 @@ pipelines/youtube/oauth_client.json
 # OS
 .DS_Store
 Thumbs.db
+
+
+# SEO script artifacts
+out/
