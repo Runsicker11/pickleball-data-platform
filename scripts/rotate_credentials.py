@@ -12,14 +12,15 @@
 """Guided credential rotation for Pickleball Effect data pipelines.
 
 Rotates Google Ads OAuth (refresh token + client + dev token), Shopify Custom
-App credentials, or Klaviyo API key. Atomically writes a new version of the
-`pipeline-env` Secret Manager secret and re-triggers the affected Cloud Run
-job to validate.
+App credentials, Klaviyo API key, or Meta System User access token.
+Atomically writes a new version of the `pipeline-env` Secret Manager secret
+and re-triggers the affected Cloud Run job to validate.
 
 Usage:
     uv run scripts/rotate_credentials.py google-ads
     uv run scripts/rotate_credentials.py shopify
     uv run scripts/rotate_credentials.py klaviyo
+    uv run scripts/rotate_credentials.py meta
     uv run scripts/rotate_credentials.py validate-all
 
 The rotation flows that require human-in-browser steps (regenerating dev
@@ -392,6 +393,74 @@ def rotate_klaviyo() -> None:
         trigger_and_wait("pipeline-klaviyo")
 
 
+# ── Meta rotation ─────────────────────────────────────────────────────────────
+
+
+def rotate_meta() -> None:
+    """Rotate META_ACCESS_TOKEN — System User token (no expiry).
+
+    Assumes the `data-pipeline` System User already exists with Ad Account
+    + `data_ingestion` app role assigned. If not, see CREDENTIAL_ROTATION.md
+    for the one-time setup walk-through.
+    """
+    env = read_pipeline_env()
+    total = 4
+
+    _step(1, total, "Generate System User token in Meta Business Suite")
+    console.print(
+        "Open [u]https://business.facebook.com/latest/settings/system_users[/]\n"
+        "for the Pickleball Effect business portfolio.\n\n"
+        "1. Select the [b]data-pipeline[/] system user.\n"
+        "2. Click [b]Generate token[/] and walk the wizard:\n"
+        "   • App: [b]data_ingestion[/]\n"
+        "   • Expiration: [b]Never[/]\n"
+        "   • Scopes: [b]ads_read, ads_management, business_management[/]\n"
+        "3. Copy the token. Do NOT paste it anywhere except the next prompt."
+    )
+    if Confirm.ask("Open the System Users page now?", default=True):
+        webbrowser.open("https://business.facebook.com/latest/settings/system_users")
+    new_token = Prompt.ask("Paste new META_ACCESS_TOKEN", password=True).strip()
+    if not new_token:
+        console.print("[red]✗ empty token, aborting[/]")
+        return
+
+    _step(2, total, "Validate against Meta debug_token endpoint")
+    if "META_APP_ID" not in env or "META_APP_SECRET" not in env:
+        console.print("[red]✗ pipeline-env missing META_APP_ID/META_APP_SECRET[/]")
+        return
+    app_token = f"{env['META_APP_ID']}|{env['META_APP_SECRET']}"
+    resp = requests.get(
+        "https://graph.facebook.com/v21.0/debug_token",
+        params={"input_token": new_token, "access_token": app_token},
+        timeout=30,
+    )
+    data = resp.json().get("data", {})
+    if not data.get("is_valid"):
+        err = data.get("error", {}).get("message", "unknown")
+        console.print(f"[red]✗ Meta rejected the token:[/] {err}")
+        if not Confirm.ask("Write anyway?", default=False):
+            return
+    else:
+        scopes = ", ".join(sorted(data.get("scopes") or [])) or "(none reported)"
+        exp = data.get("expires_at") or 0
+        exp_str = "never expires" if not exp else f"expires_at={exp}"
+        token_type = data.get("type", "?")
+        console.print(f"[green]✓[/] valid — type={token_type}, {exp_str}")
+        console.print(f"  scopes: {scopes}")
+        if exp:
+            console.print(
+                "[yellow]⚠ token has an expiration — was 'Never' selected in the wizard?[/]"
+            )
+
+    _step(3, total, "Write new pipeline-env version")
+    env["META_ACCESS_TOKEN"] = new_token
+    write_pipeline_env(env, reason="rotate meta")
+
+    _step(4, total, "Smoke-test pipeline-meta-ads")
+    if Confirm.ask("Trigger pipeline-meta-ads job now?", default=True):
+        trigger_and_wait("pipeline-meta-ads")
+
+
 # ── Validate all (read-only health check) ─────────────────────────────────────
 
 
@@ -489,6 +558,7 @@ COMMANDS: dict[str, Callable[[], None]] = {
     "google-ads": rotate_google_ads,
     "shopify": rotate_shopify,
     "klaviyo": rotate_klaviyo,
+    "meta": rotate_meta,
     "validate-all": validate_all,
 }
 
